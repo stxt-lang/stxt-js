@@ -12,7 +12,6 @@
     "sourceMap": true,
 
     "module": "ES2020",
-    "moduleResolution": "Node",
 
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
