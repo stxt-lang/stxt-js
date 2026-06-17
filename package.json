@@ -8,6 +8,7 @@
     "build": "rollup --config",
     "watch": "rollup --config --watch",
     "minify": "terser WebContent/js/stxt-parser.js -o WebContent/js/stxt-parser.min.js --compress --mangle",
+    "hello": "rollup -c rollup.config.test.js && node dist/hello.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
