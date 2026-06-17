@@ -1,0 +1,2 @@
+Inicializar el proyecto con: npm install
+Par ir compilando hacer: npm run watch
