@@ -1,0 +1,573 @@
+Document (dev.stxt.website): STXT Plantillas (@stxt.template)
+	Metadata:
+		Author: Joan Costa Mombiela
+		Last modif: 2026-06-13
+		
+	Header: @STXT@ Plantillas (@stxt.template)
+	
+	Subheader: 1. Introducción
+	
+	Content >>
+		Este documento define la especificación del lenguaje **STXT Template**, un mecanismo para describir reglas semánticas
+		(estructura, tipos, cardinalidades y valores permitidos) aplicables a documentos @STXT@.
+		
+		Un **template**:
+		
+		* Es un documento @STXT@ cuyo namespace es `@stxt.template`.
+		* Se asocia a un **namespace objetivo**, de forma análoga a un schema.
+		* Describe la **estructura esperada** mediante un bloque `Structure >>` con sintaxis simplificada.
+		* Puede compilarse a un documento `@stxt.schema` semánticamente equivalente dentro del subconjunto expresable por templates.
+		
+		Relación con `@stxt.schema`:
+		
+		* Una implementación **PUEDE** soportar sólo schemas, sólo templates, o ambos.
+		* Si existen ambos (schema y template) para el mismo namespace objetivo,
+		  una implementación conforme **DEBERÍA** establecer un criterio consistente de priorización.
+		* Para una validación concreta, una implementación **DEBE** usar una única fuente semántica efectiva: o bien schema, o bien template.
+		* STXT core **NO DEBE** imponer semántica: los templates son una capa opcional, posterior al parseo del documento @STXT@.
+		
+	Subheader: 2. Terminología
+	
+	Content >>
+		Las palabras clave **"DEBE"**, **"NO DEBE"**, **"DEBERÍA"**, **"NO DEBERÍA"**, y **"PUEDE"** deben interpretarse según **RFC 2119**.
+		
+		Términos como *nodo*, *indentación*, *namespace*, *inline* y *bloque `>>`* mantienen su significado en *STXT-SPEC*.
+		
+		Definiciones adicionales:
+		
+		* **Namespace objetivo**: el namespace @STXT@ al que aplica el template (por ejemplo `com.example.docs`).
+		* **Plantilla de nodo**: una entrada dentro del bloque `Structure >>` que define un nodo (y opcionalmente su tipo/cardinalidad y sus hijos).
+		* **Tipo**: una etiqueta semántica de validación (por ejemplo `TEXT`, `DATE`, `ENUM`) equivalente a los tipos de @STXT@ Schema.
+		* **Cardinalidad**: regla que define cuántas veces puede aparecer un nodo hijo respecto a su padre.
+		
+	Subheader: 3. Relación entre @STXT@ y Template
+	
+	Content >>
+		La validación mediante templates ocurre **después** del parseo @STXT@:
+		
+		1. Parseo del documento @STXT@ a estructura jerárquica.
+		2. Resolución del namespace efectivo de cada nodo.
+		3. Selección del template correspondiente al namespace objetivo.
+		4. Aplicación de reglas del template (estructura, cardinalidad, tipos, valores).
+		
+		Una implementación **PUEDE** aplicar reglas durante el parseo, siempre que esta validación permanezca **débilmente acoplada** al parser base.
+		
+	Subheader: 4. Estructura general de un Template
+	
+	Content >>
+		Un documento template **DEBE** tener como nodo raíz:
+		
+		`Template (@stxt.template): <namespace_objetivo>`
+		
+		El template **DEBE** contener exactamente un nodo `Structure` en forma de bloque (`>>`).
+		
+	Code >>
+		Template (@stxt.template): com.example.docs
+			Description: Plantilla de ejemplo
+			Structure >>
+				Document (com.example.docs):
+					Title: (1)
+					Body: (1) TEXT
+					
+	Content >>
+		Reglas:
+		
+		* El nodo raíz `Template` **DEBE** pertenecer al namespace `@stxt.template`.
+		* `<namespace_objetivo>` **DEBE** ser un namespace válido según *STXT-SPEC* (sección de namespaces).
+		* El documento template **PUEDE** incluir un nodo `Description`.
+		* Sólo puede existir **un template efectivo** por namespace objetivo en una validación concreta (ver sección 5).
+		
+	Subheader: 5. Un template por namespace objetivo
+	
+	Content >>
+		Para cada namespace lógico:
+		
+		* **NO DEBE** existir más de un template efectivo simultáneamente.
+		* Si existen varios templates candidatos para el mismo namespace, la implementación **DEBERÍA** tener un criterio claro,
+		  estable y determinista para decidir cuál aplica.
+		* Para una validación concreta, una implementación **NO DEBE** aplicar varios templates a la vez sobre el mismo namespace objetivo.
+		
+	Subheader: 6. Bloque `Structure >>`
+	
+	Content >>
+		El bloque `Structure >>` define un **árbol de plantillas de nodos** usando indentación, donde:
+		
+		* Cada línea no vacía define una **plantilla de nodo**.
+		* La indentación define nodos hijos (igual que @STXT@), pero **dentro de `Structure >>` no se está describiendo 
+		  un documento de datos, sino una estructura esperada**.
+		* Las reglas de indentación del documento @STXT@ base aplican al documento template fuera del bloque.
+		* El contenido de `Structure >>` se interpreta mediante la gramática de templates definida en este documento.
+		* La jerarquía dentro de `Structure >>` **DEBE** construirse con el mismo modelo de indentación consecutiva que en *STXT-SPEC*.
+		
+	Content >>
+		**Nivel superior y nodos definidos.** Las líneas de nivel superior de `Structure` **no** tienen
+		semántica especial de "raíz": son plantillas de nodo como cualquier otra, y su anidamiento define
+		sus hijos. Cada línea de `Structure` (a cualquier nivel) define o referencia un nodo del namespace
+		correspondiente, exactamente igual que un `Node` en un schema.
+		
+	Subsubheader: 6.1 Convención de estilo recomendada
+	
+	Content >>
+		Por legibilidad, se recomienda:
+		
+		* 1 tabulador por nivel.
+		* Un solo espacio entre componentes.
+		* Mantener consistencia en nombres (usar las mismas mayúsculas/diacríticos que en documentos reales).
+		
+	Subsubheader: 6.2 Sintaxis de una línea de `Structure`
+	
+	Content >>
+		Cada línea del bloque `Structure >>` tiene la forma:
+		
+		`<NodeName> [<NamespaceOverride>] ":" [<RuleSpec>]`
+		
+		donde:
+		
+		* `<NodeName>` es el nombre del nodo (texto humano; se normaliza según STXT-SPEC para comparación).
+		* `<NamespaceOverride>` es opcional y tiene la forma `(<namespace>)` o `(@namespace.especial)` y define el namespace **efectivo** de ese nodo plantilla.
+		* `":"` es obligatorio (para ser un documento @STXT@ válido).
+		* `<RuleSpec>` es opcional e incluye, en este orden lógico:
+		  1. Cardinalidad opcional (entre paréntesis).
+		  2. Referencia opcional a un nodo mediante `@Nombre Nodo`, o alternativamente un tipo.
+		  3. Valores opcionales si el tipo es `ENUM`.
+		
+		Ejemplos:
+		
+	Code >>
+		Title:
+		Title: (1)
+		Body: (1) TEXT
+		Color: (?) ENUM [red, green, blue]
+		Body Content: (?) @Body Content
+		Metadata (org.example.meta): (0,1)
+		
+	Content >>
+		Notas:
+		
+		* Si `<RuleSpec>` se omite por completo, se asume cardinalidad por defecto y tipo por defecto (sección 7 y 8).
+		* Un nodo plantilla puede tener hijos si su tipo efectivo los admite. El tipo por defecto `INLINE` admite hijos. Los tipos que prohíben hijos se definen en la sección 8.
+		* Una referencia `@Nombre Nodo` **NO DEBE** combinarse con un tipo explícito en la misma línea.
+		
+	Subsubheader: 6.3 Reglas de parsing del `Structure >>`
+	
+	Content >>
+		Un parser de templates **DEBE**:
+		
+		1. Leer el bloque `Structure >>` como una secuencia de líneas (ya canonicalizadas por @STXT@ core: trim derecha por línea).
+		2. Ignorar líneas vacías.
+		3. Calcular jerarquía por indentación (mismos principios que @STXT@: indentación consecutiva, sin saltos).
+		4. Para cada línea, parsear:
+		   * Nombre del nodo + namespace opcional `(ns)` si existe.
+		   * El carácter `:` obligatorio.
+		   * La especificación de reglas opcional (`RuleSpec`).
+		
+		5. Resolver el namespace efectivo de cada línea.
+		6. Resolver referencias `@Nombre Nodo` según la sección 6.4.
+		
+		Un parser de templates **DEBE** fallar si una línea no contiene `:`.
+
+	Subsubheader: 6.4 Definición, referencia y recursión
+
+	Content >>
+		Las plantillas distinguen entre:
+		
+		* **Definición local de nodo**: aparición de un nodo cuyo namespace efectivo pertenece al namespace objetivo del template, con su `RuleSpec` completo (tipo, valores, hijos).
+		* **Referencia local de nodo**: reutilización de una definición local mediante `@Nombre Nodo`.
+		* **Referencia externa**: aparición de un nodo cuyo namespace efectivo pertenece a otro namespace.
+		
+		Reglas de definición y referencia:
+		
+		* Un nodo local **NO DEBE** definirse más de una vez por par `nombre canónico + namespace efectivo`.
+		* Si un nodo local vuelve a aparecer en otra parte de `Structure`, **DEBE** hacerse mediante referencia `@Nombre Nodo`.
+		* Una referencia `@Nombre Nodo` **PUEDE** sobrescribir la cardinalidad, pero **NO DEBE** redefinir tipo, valores `ENUM` ni hijos.
+		* El nombre canónico de la línea y el nombre canónico de la referencia `@Nombre Nodo` **DEBEN** coincidir. Una referencia con nombre distinto al de su línea **DEBE** provocar un error de template (no existe el renombrado: `@` marca "reaparición del mismo nodo", no "puntero a otro").
+		* Los nodos de otros namespaces **NO DEBEN** definirse localmente dentro del template actual.
+		* Un nodo externo **PUEDE** aparecer varias veces, pero en esa línea **SÓLO DEBERÍA** declararse su cardinalidad.
+		
+	Content >>
+		**Recursión.** Una referencia `@Nombre Nodo` **DEBE** apuntar a:
+		
+		* una definición local **previa** (ya cerrada) del mismo template, **o**
+		* un **nodo ancestro cuya definición esté abierta** en ese punto, **incluido el propio nodo que se está definiendo**.
+		
+		Esta segunda opción habilita estructuras recursivas: un nodo puede declararse como hijo de sí
+		mismo o de un ancestro. Para resolver la referencia sólo se necesita la **identidad** del nodo
+		(nombre + namespace + tipo), que ya está disponible en su línea de definición; no es necesario
+		que su lista de hijos esté completa.
+		
+		Como escribir `Structure` equivale a recorrer en profundidad el grafo de nodos, esta regla
+		cubre todo grafo de dependencias: auto-recursión, recursión a través de ancestros y recursión
+		mutua.
+		
+		Ejemplo (auto-recursión):
+		
+	Code >>
+		Template (@stxt.template): com.example.doc
+			Structure >>
+				Documento (com.example.doc):
+					Título: (1)
+					Sección: (*)
+						Título: (1) @Título
+						Texto: (?) TEXT
+						Sección: (*) @Sección
+		
+	Content >>
+		Aquí la última línea, `Sección: (*) @Sección`, declara `Sección` como hijo de sí misma,
+		referenciando al ancestro `Sección` cuya definición está abierta. `Título: (1) @Título`
+		reutiliza la definición local previa de `Título`.
+		
+		Ejemplo (recursión mutua `A`/`B`):
+		
+	Code >>
+		Template (@stxt.template): com.example.tree
+			Structure >>
+				A (com.example.tree):
+					B: (*)
+						A: (?) @A
+		
+	Subheader: 7. Cardinalidades
+	
+	Content >>
+		La cardinalidad se aplica **por instancia del nodo padre**, contando sólo hijos directos que coincidan por:
+		
+		* Nombre canónico del nodo (según STXT-SPEC).
+		* Namespace efectivo del nodo.
+		
+		La cardinalidad se expresa como un token opcional entre paréntesis: `( ... )`.
+		Es **independiente del orden** de los hijos (cuenta apariciones, no posiciones).
+		
+	Subsubheader: 7.1 Formas permitidas
+	
+	Content >>
+		Formas permitidas:
+		
+		| Forma      | Significado                  |
+		|------------|------------------------------|
+		| `num`      | Exactamente `num`.           |
+		| `*`        | Cualquier número (`0..∞`).   |
+		| `+`        | Una o más (`1..∞`).          |
+		| `?`        | Cero o una (`0..1`).         |
+		| `num+`     | `num` o más (`num..∞`).      |
+		| `num-`     | Hasta `num` (`0..num`).      |
+		| `min,max`  | Entre `min` y `max`.         |
+		
+		Reglas:
+		
+		* `num`, `min` y `max` **DEBEN** ser enteros no negativos.
+		* En `min,max`, **DEBE** cumplirse `min <= max`.
+		* `+` equivale a `1+`.
+		* `?` equivale a `0,1`.
+		* La cardinalidad por defecto, si se omite, es `*`.
+		
+	Subsubheader: 7.2 Cardinalidad por defecto
+	
+	Content >>
+		Si no se especifica cardinalidad, el valor por defecto es:
+		
+		* `*` (cualquier número).
+		
+	Subheader: 8. Tipos
+	
+	Content >>
+		Los tipos en templates reutilizan el conjunto de tipos de @STXT@ Schema, con la misma intención: validar forma del valor y, 
+		opcionalmente, su contenido.
+		
+		El tipo se especifica como una palabra tras la cardinalidad (si existe).
+		
+		Ejemplos:
+		
+	Code >>
+		Fecha: (1) DATE
+		Cuerpo: (1) TEXT
+		Es Público: (1) BOOLEAN
+		
+	Content >>
+		Reglas generales:
+		
+		* El tipo explícito **DEBE** coincidir exactamente con uno de los tipos soportados por la implementación.
+		* Si una línea usa referencia `@Nombre Nodo`, **NO DEBE** declarar además un tipo explícito.
+		* Las reglas semánticas de tipos `INLINE`, `GROUP`, `BLOCK`, `TEXT`, `ENUM`, `NUMBER`, `DATE`, etc. **DEBEN** ser coherentes con las definidas en *STXT-SCHEMA-SPEC*.
+
+	Subsubheader: 8.1 Tipo por defecto
+	
+	Content >>
+		Si se omite el tipo, el tipo por defecto es:
+		
+		* `INLINE`
+		
+	Subsubheader: 8.2 Compatibilidad con hijos
+	
+	Content >>
+		La regla de compatibilidad con hijos es la misma que en *STXT-SCHEMA-SPEC* (sección 9):
+		
+		**Sólo los tipos `INLINE` y `GROUP` admiten hijos. Todos los demás tipos son hojas.**
+		
+		Por tanto:
+		
+		* Si un nodo plantilla declara hijos en `Structure >>`, su tipo efectivo **DEBE** ser `INLINE` o `GROUP`. En caso contrario, el template **DEBE** considerarse inválido.
+		* El tipo por defecto `INLINE` admite hijos, de modo que un nodo sin tipo explícito puede tener hijos.
+		* Cualquier tipo con validación de contenido (`BLOCK`, `TEXT`, `NUMBER`, `BOOLEAN`, `DATE`, `ENUM`, `BASE64`, etc.) **NO** admite hijos.
+		
+	Subsubheader: 8.3 Conjunto de tipos
+	
+	Content >>
+		El conjunto de tipos recomendado es el mismo que *STXT-SCHEMA-SPEC*.
+		
+		Una implementación de templates:
+		
+		* **DEBE** soportar al menos: `INLINE`, `GROUP`, `BLOCK`, `TEXT`, `NUMBER`, `BOOLEAN`, `DATE`, `ENUM`.
+		* **DEBERÍA** soportar el resto de tipos definidos en @STXT@ Schema (por ejemplo `INTEGER`, `NATURAL`, 
+		  `TIME`, `TIMESTAMP`, `UUID`, `URL`, `EMAIL`, `BASE64`, etc.).
+		
+	Subheader: 9. ENUM y lista de valores
+	
+	Content >>
+		Si el tipo es `ENUM`, el template **DEBE** declarar una lista de valores permitidos, con al menos un valor.
+		
+		La lista de valores se especifica con corchetes `[...]` tras el tipo:
+		
+		`ENUM [valor1, valor2, valor3]`
+		
+	Code >>
+		Color: (1) ENUM [red, green, blue]
+		
+	Content >>
+		Reglas:
+		
+		* Si el tipo es `ENUM`, la lista de valores **DEBE** existir para que tenga un contenido válido.
+		* Si el tipo **NO** es `ENUM`, una lista `[...]` **DEBE** considerarse error de template.
+		* Los valores se separan por comas `,`.
+		* Se aplica trim (espacios/tab) alrededor de cada valor.
+		* La comparación de valores **DEBE** hacerse sobre el valor inline ya normalizado mediante trim izquierda/derecha.
+		* La comparación de valores **DEBE** ser exacta y **CASE-SENSITIVE**.
+		* La comparación **NO DEBE** aplicar canonización adicional, eliminación de diacríticos ni normalización equivalente al nombre canónico de nodos.
+		* Debe existir al menos un valor en la lista.
+		* Los valores **NO DEBEN** repetirse tras aplicar el trim de normalización.
+		
+	Subsubheader: 9.1 Limitación de la sintaxis de lista
+		
+	Content >>
+		Por la forma de la sintaxis `[a, b, c]`, un valor `ENUM` declarado en un template **NO PUEDE**
+		contener una coma `,` (separador de valores) ni un corchete de cierre `]` (fin de lista).
+		Tampoco conserva espacios al inicio o final, que el trim elimina.
+		
+		Ésta es una limitación del **subconjunto expresable por templates**. Si se necesitan valores
+		`ENUM` con comas, corchetes o espacios significativos, debe usarse un **schema** (`@stxt.schema`),
+		cuyos nodos `Value` admiten cualquier valor inline.
+		
+	Subheader: 10. Namespaces dentro de `Structure`
+	
+	Content >>
+		Cada línea puede incluir un namespace explícito para el nodo plantilla:
+		
+	Code >>
+		Metadata (org.example.meta): (?)
+		
+	Content >>
+		Reglas:
+		
+		* Si una línea de `Structure` omite namespace explícito, hereda el namespace efectivo de su padre.
+		* Si el nodo no tiene padre dentro de `Structure`, el namespace por defecto es el namespace objetivo del template.
+		* La herencia de namespace funciona como en documentos @STXT@ de datos.
+		* Si se especifica `(otro.ns)`, ese nodo plantilla pertenece a ese otro namespace.
+		* Si se especifica `(otro.ns)` y ese namespace es distinto del namespace objetivo, la línea **NO DEBE** definir hijos, tipo explícito ni valores `ENUM`; sólo **PUEDE** declarar cardinalidad.
+		
+	Subheader: 11. Reglas de "nodos definidos"
+	
+	Content >>
+		En templates, un nodo queda definido por su aparición en `Structure`.
+		A diferencia de Schema, no existe una sección `Node:` separada; la propia estructura es la definición.
+		
+		Reglas:
+		
+		* Todo nodo local definido en `Structure` pasa a formar parte del conjunto de nodos del template.
+		* Si un template referencia nodos cross-namespace, un sistema de validación completo **DEBERÍA**
+		  disponer de template o schema correspondiente para ese namespace externo si desea validar profundamente esos nodos.
+		* Una implementación **PUEDE** validar sólo cardinalidad y estructura del namespace objetivo, tratando nodos cross-namespace
+		  como "caja negra", según configuración.
+		
+	Subheader: 12. Compilación a Schema (equivalencia semántica)
+	
+	Content >>
+		Un template puede compilarse a un schema equivalente:
+		
+		* Cada nodo local definido en `Structure` genera una definición `Node` (en el namespace correspondiente).
+		* La jerarquía de indentación en `Structure` genera `Children/Child` en el schema.
+		* La cardinalidad `( ... )` en el template se traduce a `Min` / `Max` en el schema.
+		* El tipo se copia a `Type`.
+		* `ENUM [a,b]` se traduce a `Values/Value`.
+		* Una referencia `@Nombre Nodo` reutiliza la definición ya generada para ese nodo local y sólo modifica la cardinalidad del `Child` correspondiente. La recursión (auto-referencia o ancestro abierto) se traduce a un `Child` que apunta al mismo `Node`.
+		* Un nodo cross-namespace sólo genera una referencia `Child`; su definición corresponde al template o schema de ese otro namespace.
+		
+		Reglas de traducción de cardinalidad:
+		
+		* `(num)` → `Min=num`, `Max=num`
+		* `(*)` → sin `Min`, sin `Max`
+		* `(+)` → `Min=1`
+		* `(?)` → `Max=1`
+		* `(num+)` → `Min=num`
+		* `(num-)` → `Max=num`
+		* `(min,max)` → `Min=min`, `Max=max`
+		
+	Subheader: 13. Errores de Template
+	
+	Content >>
+		Un template es inválido si ocurre cualquiera de estas condiciones:
+		
+		1. El documento de `Structure>>` no es un documento válido @STXT@ (indentación inválida, etc.)
+		2. El documento no tiene raíz `Template (@stxt.template): <namespace_objetivo>`.
+		3. Falta `Structure >>` o `Structure` no es bloque `>>`.
+		4. Una línea no vacía dentro de `Structure` no contiene `:`.
+		5. Cardinalidad mal formada o con números inválidos.
+		6. Tipo desconocido (según el conjunto de tipos soportado por la implementación).
+		7. Uso de `[...]` si el tipo no es `ENUM`.
+		8. Un nodo con hijos tiene un tipo efectivo que no admite hijos (es decir, distinto de `INLINE` o `GROUP`).
+		9. Redefinir un nodo local que ya ha aparecido previamente sin usar referencia `@Nombre Nodo`.
+		10. Usar una referencia `@Nombre Nodo` que no apunta a una definición local previa ni a un ancestro abierto.
+		11. El nombre de una referencia `@Nombre Nodo` no coincide (en nombre canónico) con el nombre de su línea.
+		12. Declarar a la vez referencia `@Nombre Nodo` y tipo explícito en la misma línea.
+		13. Declarar valores `ENUM` duplicados tras la normalización por trim.
+		14. Definir hijos, tipo explícito o valores `ENUM` en un nodo cross-namespace.
+		
+	Subheader: 14. Conformidad
+	
+	Content >>
+		Una implementación de templates es conforme si:
+		
+		* Implementa la gramática de `Template` y `Structure` de este documento.
+		* Aplica las reglas de cardinalidad, tipos, referencias `@Nombre Nodo` (incluida recursión por ancestro abierto) y `ENUM`.
+		* Aplica las reglas de compatibilidad de hijos por tipo (sólo `INLINE` y `GROUP` admiten hijos).
+		* Valida cardinalidades de forma independiente del orden.
+		* Rechaza templates inválidos según la sección 13.
+		* Define un criterio estable de selección de template (si existieran múltiples fuentes),
+		  sin aplicar más de uno simultáneamente por namespace objetivo.
+		
+	Subheader: 15. Meta-template del propio sistema `@stxt.template`
+	
+	Content >>
+		Esta sección define un template mínimo recomendado para validar documentos del namespace `@stxt.template`.
+		
+	Code >>
+		Template (@stxt.template): @stxt.template
+			Structure >>
+				Template (@stxt.template):
+					Description: (?) TEXT
+					Structure: (1) BLOCK
+		
+	Content >>
+		Notas:
+		
+		* `Structure` es `BLOCK` porque en templates debe ser un bloque `>>`.
+		* `Description` es opcional y puede ser `TEXT`.
+		* La línea `Template` usa cardinalidad por defecto (`*`): como el nivel superior de `Structure`
+		  no tiene semántica especial de raíz (sección 6), no se le impone una cardinalidad de documento.
+		
+	Subheader: 16. Ejemplos normativos
+	
+	Subsubheader: 16.1 Template simple (un namespace)
+	
+	Code >>
+		Template (@stxt.template): com.example.docs
+			Description: Plantilla simple
+			Structure >>
+				Document (com.example.docs):
+					Title: (1)
+					Author: (1)
+					Date: (1) DATE
+					Body: (1) TEXT
+					
+	Subsubheader: 16.2 Template con repetición y nodos anidados
+	
+	Code >>
+		Template (@stxt.template): com.example.blog.post
+			Structure >>
+				Post (com.example.blog.post):
+					Title: (1)
+					Slug: (1)
+					Published: (1) BOOLEAN
+					Tags: (?)
+						Tag: (+)
+					Sections: (1)
+						Section: (+)
+							Heading: (1)
+							Content: (1) TEXT
+							
+	Subsubheader: 16.3 Template con ENUM
+	
+	Code >>
+		Template (@stxt.template): com.example.ui.theme
+			Structure >>
+				Theme (com.example.ui.theme):
+					Name: (1)
+					Mode: (1) ENUM [light, dark]
+					Accent: (?) ENUM [blue, green, orange]
+
+	Subsubheader: 16.4 Template con reutilización local
+
+	Code >>
+		Template (@stxt.template): org.example.docs
+			Structure >>
+				Email (org.example.docs):
+					Body Content: (1) TEXT
+				Demo (org.example.docs):
+					Body Content: (?) @Body Content
+					
+	Subsubheader: 16.5 Template con recursión
+
+	Code >>
+		Template (@stxt.template): com.example.doc
+			Structure >>
+				Documento (com.example.doc):
+					Título: (1)
+					Sección: (*)
+						Título: (1) @Título
+						Texto: (?) TEXT
+						Sección: (*) @Sección
+
+	Content >>
+		`Sección` se contiene a sí misma a cualquier profundidad. Es el caso que un parser con la
+		regla de "sólo definición previa" rechazaría incorrectamente; por eso se incluye como ejemplo
+		normativo de conformidad.
+
+	Subsubheader: 16.6 Cross-namespace (referencias externas)
+	
+	Code >>
+		Template (@stxt.template): com.example.docs
+			Structure >>
+				Document (com.example.docs):
+					Metadata (org.example.meta): (?)
+					Content: (1) TEXT
+					
+	Content >>
+		En este caso:
+		
+		* `Metadata` pertenece a `org.example.meta`.
+		* La validación profunda de `Metadata` dependerá de si existe un schema/template para `org.example.meta`.
+		
+	Subheader: 17. Apéndice A — Gramática (informal)
+	
+	Code >>
+		TemplateDoc      = "Template" "(" "@stxt.template" ")" ":" NamespaceTarget { TemplateField }
+		TemplateField    = DescriptionField | StructureField
+		DescriptionField = "Description" ":" Text
+		StructureField   = "Structure" ">>" Newline { StructureLine }
+		
+		StructureLine    = Indent NodeSpec Newline
+		NodeSpec         = NodeName [NsOverride] ":" [RuleSpec]
+		NsOverride       = "(" ["@"] Namespace ")"
+		RuleSpec         = [Card] [NodeRef | Type [EnumValues]]
+		
+		Card             = "(" CardToken ")"
+		CardToken        = "*" | "+" | "?" | Num | Num "+" | Num "-" | Num "," Num
+		NodeRef          = "@" NodeName
+		Type             = IdentUpper
+		EnumValues       = "[" Value { "," Value } "]"
+		
+		NodeName         = Texto hasta `(` o `:`, con trim y compactación de espacios
+		NamespaceTarget  = Namespace según STXT-SPEC
+		Namespace        = Ident "." Ident { "." Ident }   ; al menos 2 Ident
+		Ident            = [A-Za-z0-9]+   ; aceptado en entrada; normalizado a minúsculas (STXT-SPEC sección 7)
+		IdentUpper       = [A-Z0-9_]+     ; recomendado en mayúsculas (estilo)
+		Value            = cualquier texto sin "," ni "]", con trim   ; ver sección 9.1
+		
+	Subheader: 18. Fin del Documento
