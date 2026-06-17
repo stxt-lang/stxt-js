@@ -1,11 +1,14 @@
 import typescript from '@rollup/plugin-typescript';
 
-// Empaqueta un test (TS) a un único JS ejecutable con node.
+// Nombre del test a empaquetar (lo fija run-test.js vía variable de entorno).
+const name = process.env.STXT_TEST || 'hello';
+
+// Empaqueta src/test/<name>.ts a un único JS ejecutable con node.
 // Rollup resuelve los imports sin extensión que usa el código fuente.
 export default {
-  input: 'src/test/hello.ts',
+  input: `src/test/${name}.ts`,
   output: {
-    file: 'dist/hello.js',
+    file: `dist/${name}.js`,
     format: 'es'
   },
   plugins: [
