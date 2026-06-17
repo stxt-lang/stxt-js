@@ -4,7 +4,7 @@
     "lib": ["DOM", "ES2021"],
 
     "rootDir": "src",
-    "outDir": "js",
+    "outDir": "WebContent/js",
 
     "strict": true,
     "noEmitOnError": true,
@@ -17,7 +17,7 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
 
-    "types": ["chrome", "jquery"]
+    "types": []
   },
   "include": ["src/**/*.ts"],
   "exclude": ["node_modules"]

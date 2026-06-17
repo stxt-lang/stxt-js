@@ -14,12 +14,12 @@ export const BASE64: Type = {
         const raw = StringUtils.cleanSpaces(n.getText());
 
         try {
-            // Intentamos decodificar
-            const buf = Buffer.from(raw, "base64");
+            // Intentamos decodificar (atob: global del navegador, lib DOM)
+            const decoded = atob(raw);
 
             // Re-encode para verificar consistencia
             // (evita aceptar cadenas parcialmente válidas)
-            const reencoded = buf.toString("base64");
+            const reencoded = btoa(decoded);
 
             // Normalizamos padding para comparar
             const normalizedInput = raw.replace(/=+$/, "");
