@@ -31,10 +31,29 @@ The goal stated above — `../stxt-vscode/stxt` stops keeping its own copy of th
 
 Both repos build/lint/test clean after this change (`npm test` here: 224 passing).
 
+## Naming decided (2026-07-28)
+
+The GitHub org `stxt-lang` and the npm org/scope `@stxt-lang` are both already
+reserved by the user (org already hosts `stxt-js`, `stxt-vscode`, `stxt-java`,
+`stxt-web`, `stxt-python`, `stxt-cms`, `stxt-impl`). The npm package published
+from this repo is **`@stxt-lang/core`** (chosen over `@stxt-lang/parser` /
+`@stxt-lang/js` — "core" leaves room for future sibling JS packages like a CLI
+or language server without competing for the "main" name). `package.json`'s
+`name` is `@stxt-lang/core` with `publishConfig.access: "public"` (required for
+scoped packages, which default to private). `stxt-vscode/stxt`'s dependency and
+its 7 extension-only files' imports were updated from `stxt-parser-js` to
+`@stxt-lang/core` accordingly; both repos verified building/linting (and, here,
+224 tests passing) after the rename.
+
 Open decisions, still to make:
 
-- **Distribution mechanism.** `file:../../stxt-js` (from `stxt-vscode/stxt`) is enough while both repos live as sibling folders on one machine. It won't work once this needs to build outside that machine (CI, another developer) — at that point this should move to a real package registry instead.
-- **Public repo / package naming.** The intent is to eventually open-source this (and `stxt-vscode`) under a public GitHub org — first choice `stxt-lang` (already the placeholder in `package.json`'s `repository.url`), falling back to the shorter `stxt` if that name/org is available. That decision also determines the eventual published npm package name — `stxt-parser-js` is just a placeholder from before publishing was on the table.
+- **Distribution mechanism.** `file:../../stxt-js` (from `stxt-vscode/stxt`) is
+  still what's in `package.json` today — enough while both repos live as
+  sibling folders on one machine. Still need to actually run `npm publish`
+  (requires the user's own `npm login`/2FA, not something to automate) and
+  then switch `stxt-vscode/stxt`'s dependency from the `file:` path to a real
+  version range (e.g. `^1.0.0`) once `@stxt-lang/core` is live on the npm
+  registry. Not yet done as of 2026-07-28.
 
 ## Commands
 
