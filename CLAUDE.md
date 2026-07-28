@@ -24,7 +24,7 @@ Consult those files before changing parser or schema semantics; behaviour change
 
 That release closed the whole "polish the package's public face" list — README, LICENSE, npm metadata, tags, source maps, lock file — plus the `ValidationException` export.
 
-One loose end: the **`v0.5.2` tag points at `3295a80`**, one commit before `604477c`, which changed the `LICENSE` copyright holder (a file that *is* in the tarball). Worth moving with `git tag -f -a v0.5.2 <commit> && git push --force origin v0.5.2`. `v0.5.1` was also tagged retroactively at `a25e88e` (the `gitHead` the publish recorded). **Tagging is now part of the release routine.**
+Both tags are in place and pushed: `v0.5.2` at `604477c` and `v0.5.1` retroactively at `a25e88e` (the `gitHead` the publish recorded). **Tagging is now part of the release routine**, and the tags here are annotated (`git tag -a -m "..."` — pass `-m` or git opens an editor).
 
 Ideas for whenever there is a next release, none urgent:
 
