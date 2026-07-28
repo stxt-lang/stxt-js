@@ -20,31 +20,27 @@ Consult those files before changing parser or schema semantics; behaviour change
 
 ## Next up (as of 2026-07-28)
 
-**Nothing is broken.** `@stxt-lang/core@0.5.1` was published on 2026-07-28 and verified end to end: the tarball straight from the registry loads all 25 schemas of `../stxt-web/.stxt` and parses+validates the 44 documents of its `docs/`, `es/` and `en/` with zero errors; `npm test` here is 224 passing; `../stxt-vscode/stxt` compiles, lints and packages a working `.vsix` against it.
+**Nothing is broken.** The whole "polish the package's public face" list (README, LICENSE, npm metadata, tags, source maps, lock file) plus the `ValidationException` export landed in commit `3295a80`, tagged **`v0.5.2`** and pushed to GitHub. `npm test` is 224 passing.
 
-What's left is **polishing the package's public face**, which was never done because 0.5.1 was the first release. Roughly in order of value:
+Two things are still pending, in order:
 
-1. **Write a `README.md`.** The npm page for `@stxt-lang/core` is currently blank (`readmeFilename: ""` in the registry metadata) — this is the most visible gap. It should cover: what STXT is (link to https://stxt.dev), install, and a minimal `Parser` + `UnifiedSchemaProvider`/`ConditionalValidator` example. Note `README.md` also has to be reachable by `files` (npm always includes it, so no change needed there).
-2. **Add a `LICENSE` file and settle the license.** `package.json` says `ISC`, `../stxt-vscode/stxt` says `MIT`, and neither repo has a licence file. Pick one for the whole `stxt-lang` org and make them agree.
-3. **Fill in `author` and `keywords`** in `package.json` (both empty today), so the package is findable on npm.
-4. **Tag the release.** There is no `v0.5.1` tag; the publish recorded `gitHead` `a25e88e`. Worth tagging retroactively and making tagging part of the release routine.
-5. **Decide what to do about the source maps.** `out/**/*.js.map` ships but `src/` doesn't, so every map dangles. Either add `src` to `files` or stop emitting maps for the published build.
-6. **Regenerate `package-lock.json`.** It's a fossil from before the rename: `name: "stxt-parser-js"`, `version: "1.0.0"`, `lockfileVersion: 1`. Harmless for publishing, but misleading.
-7. **Consider exporting `ValidationException` from `src/all.ts`.** `../stxt-vscode/stxt`'s `AnalysisDoc.ts` has to distinguish schema warnings from parse errors with `error.name === 'ValidationException'` (a string comparison) because the class isn't exported. It works today, but exporting the class would let it use `instanceof`. Doing this means a new release and a bump on the extension side.
+1. **Publish `@stxt-lang/core@0.5.2` to npm.** Everything is committed and the tarball verified with `npm pack --dry-run` (115 files / 27 kB, README + LICENSE in, no dangling maps), but the user chose to push to GitHub only and review before publishing. Nothing else can move until this ships.
+2. **Update `../stxt-vscode/stxt` for the `ValidationException` export.** Blocked on step 1, since the extension can't install `^0.5.2` before it exists on the registry. Two changes there: bump the dependency range and `npm install`, then replace the `error.name === 'ValidationException'` string comparison in `src/extension/AnalysisDoc.ts` (line 48) with `error instanceof ValidationException`, importing the class from `@stxt-lang/core`. Also worth a `CHANGELOG.md` entry there, since that file is still the changelog for the language.
 
-Items 1–6 are packaging-only and can go out together as **0.5.2** without touching a line of `src/`. Item 7 is an API change and needs the extension updated in the same pass.
+For the record, `v0.5.1` was also tagged retroactively at `a25e88e` (the `gitHead` the publish recorded). **Tagging should now be part of the release routine.**
 
 ## The npm package: `@stxt-lang/core`
 
-This repo is published to npm as **`@stxt-lang/core`** — first release **0.5.1 on 2026-07-28**. The name was chosen over `@stxt-lang/parser` / `@stxt-lang/js` because "core" leaves room for future sibling JS packages (a CLI, a language server) without competing for the "main" name. The GitHub org `stxt-lang` and the npm scope `@stxt-lang` are both reserved by the user (the org also hosts `stxt-vscode`, `stxt-java`, `stxt-web`, `stxt-python`, `stxt-cms`, `stxt-impl`).
+This repo is published to npm as **`@stxt-lang/core`** — first release **0.5.1 on 2026-07-28**, with **0.5.2 prepared the same day** (committed and tagged, not yet published). The name was chosen over `@stxt-lang/parser` / `@stxt-lang/js` because "core" leaves room for future sibling JS packages (a CLI, a language server) without competing for the "main" name. The GitHub org `stxt-lang` and the npm scope `@stxt-lang` are both reserved by the user (the org also hosts `stxt-vscode`, `stxt-java`, `stxt-web`, `stxt-python`, `stxt-cms`, `stxt-impl`).
 
 Packaging facts worth knowing before touching `package.json`:
 
 - `name` is `@stxt-lang/core` with `publishConfig.access: "public"` — required, since scoped packages default to private.
-- `main`/`types` point at `out/all.js` / `out/all.d.ts`. **`src/all.ts` is the only public surface**: anything a consumer should be able to import has to be re-exported from there. It currently exports `Node`, `Parser`, `ParseResult`, `Line`, `Constants`, `parseLine`, `StringUtils`, `ParseException`, `Observer`, `Schema`, `SchemaValidator`, `SchemaProvider`, `NodeDefinition`, `ChildDefinition`, `transformNodeToSchema`, `UnifiedSchemaProvider`, `ConditionalValidator`, `NodeWriter`, `IndentStyle`, `transformTemplateNodeToSchema`. Notably **not** exported: `ValidationException`, `TypeRegistry`, `RuntimeException`, `SchemaProviderMemory`.
-- `"prepare": "npm run build"` regenerates `out/` on install, and `"files"` is scoped to `out/all.js`, `out/all.js.map`, `out/all.d.ts` plus the `core`/`exceptions`/`processors`/`runtime`/`schema`/`template` subfolders — deliberately excluding `out/test` (build output of this repo's own regression tests).
+- `main`/`types` point at `out/all.js` / `out/all.d.ts`. **`src/all.ts` is the only public surface**: anything a consumer should be able to import has to be re-exported from there. It currently exports `Node`, `Parser`, `ParseResult`, `Line`, `Constants`, `parseLine`, `StringUtils`, `ParseException`, `ValidationException`, `Observer`, `Schema`, `SchemaValidator`, `SchemaProvider`, `NodeDefinition`, `ChildDefinition`, `transformNodeToSchema`, `UnifiedSchemaProvider`, `ConditionalValidator`, `NodeWriter`, `IndentStyle`, `transformTemplateNodeToSchema`. Notably **not** exported: `TypeRegistry`, `RuntimeException`, `SchemaProviderMemory`.
+- `"prepare": "npm run build"` regenerates `out/` on install, and `"files"` is scoped to `out/all.js`, `out/all.d.ts` plus the `core`/`exceptions`/`processors`/`runtime`/`schema`/`template` subfolders — deliberately excluding `out/test` (build output of this repo's own regression tests) and, via the `"!out/**/*.js.map"` negation, the source maps (they dangled, because `src/` isn't published).
+- The licence is **MIT** across the `stxt-lang` org, copyright `stxt-lang`: `LICENSE` here, `LICENSE.txt` in `../stxt-vscode/stxt`. `package.json` said `ISC` until 0.5.2.
 
-The published tarball is 169 files / 38 KB: `.js`, `.d.ts` and `.js.map` for the barrel plus the six subfolders. For the gaps it still has (no README, no LICENSE, empty `author`/`keywords`, dangling maps), see [Next up](#next-up-as-of-2026-07-28) above.
+The 0.5.2 tarball is 115 files / 27 kB (0.5.1 was 169 / 38 KB): `.js` and `.d.ts` for the barrel plus the six subfolders, plus `README.md` and `LICENSE`.
 
 ## How `../stxt-vscode/stxt` consumes this
 
