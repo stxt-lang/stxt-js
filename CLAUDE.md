@@ -20,18 +20,20 @@ Consult those files before changing parser or schema semantics; behaviour change
 
 ## Next up (as of 2026-07-28)
 
-**Nothing is broken.** The whole "polish the package's public face" list (README, LICENSE, npm metadata, tags, source maps, lock file) plus the `ValidationException` export landed in commit `3295a80`, tagged **`v0.5.2`** and pushed to GitHub. `npm test` is 224 passing.
+**Nothing is broken and nothing is pending here.** `@stxt-lang/core@0.5.2` was published on 2026-07-28 and verified from the registry (115 files, README + LICENSE in, no `.js.map`, `ValidationException` exported). `npm test` is 224 passing. `../stxt-vscode/stxt` 0.5.2 consumes it, compiles, lints and packages a 79-file `.vsix`.
 
-Two things are still pending, in order:
+That release closed the whole "polish the package's public face" list — README, LICENSE, npm metadata, tags, source maps, lock file — plus the `ValidationException` export.
 
-1. **Publish `@stxt-lang/core@0.5.2` to npm.** Everything is committed and the tarball verified with `npm pack --dry-run` (115 files / 27 kB, README + LICENSE in, no dangling maps), but the user chose to push to GitHub only and review before publishing. Nothing else can move until this ships.
-2. **Update `../stxt-vscode/stxt` for the `ValidationException` export.** Blocked on step 1, since the extension can't install `^0.5.2` before it exists on the registry. Two changes there: bump the dependency range and `npm install`, then replace the `error.name === 'ValidationException'` string comparison in `src/extension/AnalysisDoc.ts` (line 48) with `error instanceof ValidationException`, importing the class from `@stxt-lang/core`. Also worth a `CHANGELOG.md` entry there, since that file is still the changelog for the language.
+One loose end: the **`v0.5.2` tag points at `3295a80`**, one commit before `604477c`, which changed the `LICENSE` copyright holder (a file that *is* in the tarball). Worth moving with `git tag -f -a v0.5.2 <commit> && git push --force origin v0.5.2`. `v0.5.1` was also tagged retroactively at `a25e88e` (the `gitHead` the publish recorded). **Tagging is now part of the release routine.**
 
-For the record, `v0.5.1` was also tagged retroactively at `a25e88e` (the `gitHead` the publish recorded). **Tagging should now be part of the release routine.**
+Ideas for whenever there is a next release, none urgent:
+
+- The npm README is the only doc that shows the API in use; keep its examples honest (they were all executed against `out/all.js` before shipping — the first draft had invented schema syntax and wrong `Observer`/`NodeWriter` signatures).
+- `TypeRegistry`, `RuntimeException` and `SchemaProviderMemory` are still unexported. Export them only if a consumer actually needs them.
 
 ## The npm package: `@stxt-lang/core`
 
-This repo is published to npm as **`@stxt-lang/core`** — first release **0.5.1 on 2026-07-28**, with **0.5.2 prepared the same day** (committed and tagged, not yet published). The name was chosen over `@stxt-lang/parser` / `@stxt-lang/js` because "core" leaves room for future sibling JS packages (a CLI, a language server) without competing for the "main" name. The GitHub org `stxt-lang` and the npm scope `@stxt-lang` are both reserved by the user (the org also hosts `stxt-vscode`, `stxt-java`, `stxt-web`, `stxt-python`, `stxt-cms`, `stxt-impl`).
+This repo is published to npm as **`@stxt-lang/core`** — first release **0.5.1 on 2026-07-28**, **0.5.2 the same day**. The name was chosen over `@stxt-lang/parser` / `@stxt-lang/js` because "core" leaves room for future sibling JS packages (a CLI, a language server) without competing for the "main" name. The GitHub org `stxt-lang` and the npm scope `@stxt-lang` are both reserved by the user (the org also hosts `stxt-vscode`, `stxt-java`, `stxt-web`, `stxt-python`, `stxt-cms`, `stxt-impl`).
 
 Packaging facts worth knowing before touching `package.json`:
 
@@ -44,7 +46,7 @@ The 0.5.2 tarball is 115 files / 27 kB (0.5.1 was 169 / 38 KB): `.js` and `.d.ts
 
 ## How `../stxt-vscode/stxt` consumes this
 
-The VSCode extension keeps **only** extension-specific code (10 files under `src/extension/` plus `src/extension.ts`) and depends on this package normally: `"dependencies": { "@stxt-lang/core": "^0.5.1" }`, resolved from the npm registry. It used to carry a duplicated copy of `core/`, `schema/`, `runtime/`, `processors/`, `exceptions/`, `template/` and `test/` (61 files) under its own `src/`; those were deleted with `git rm` when the split landed.
+The VSCode extension keeps **only** extension-specific code (10 files under `src/extension/` plus `src/extension.ts`) and depends on this package normally: `"dependencies": { "@stxt-lang/core": "^0.5.2" }`, resolved from the npm registry. Extension and package versions have moved in lockstep so far (extension 0.5.2 ↔ core 0.5.2). It used to carry a duplicated copy of `core/`, `schema/`, `runtime/`, `processors/`, `exceptions/`, `template/` and `test/` (61 files) under its own `src/`; those were deleted with `git rm` when the split landed.
 
 Consequences to keep in mind:
 
