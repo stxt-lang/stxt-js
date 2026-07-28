@@ -1,7 +1,8 @@
 # Dependencies
 node_modules/
 
-# Test build output
+# Build output
+out/
 dist/
 
 # Logs

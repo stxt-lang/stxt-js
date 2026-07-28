@@ -3,12 +3,10 @@
   "version": "1.0.0",
   "description": "",
   "type": "module",
-  "main": "WebContent/js/stxt-parser.js",
+  "main": "out/all.js",
   "scripts": {
-    "build": "rollup --config",
-    "watch": "rollup --config --watch",
-    "minify": "terser WebContent/js/stxt-parser.js -o WebContent/js/stxt-parser.min.js --compress --mangle",
-    "test": "node run-test.js"
+    "build": "tsc",
+    "watch": "tsc --watch"
   },
   "repository": {
     "type": "git",
@@ -18,10 +16,6 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "@rollup/plugin-typescript": "^11.1.6",
-    "rollup": "^3.29.5",
-    "terser": "^5.31.3",
-    "tslib": "^2.6.3",
     "typescript": "^5.5.4"
   }
 }
