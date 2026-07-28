@@ -4,10 +4,22 @@
   "description": "",
   "main": "out/all.js",
   "types": "out/all.d.ts",
+  "files": [
+    "out/all.js",
+    "out/all.js.map",
+    "out/all.d.ts",
+    "out/core",
+    "out/exceptions",
+    "out/processors",
+    "out/runtime",
+    "out/schema",
+    "out/template"
+  ],
   "scripts": {
     "build": "tsc",
     "watch": "tsc --watch",
     "lint": "eslint src --ext .ts",
+    "prepare": "npm run build",
     "pretest": "npm run build && npm run lint",
     "test": "mocha \"out/test/**/*.test.js\""
   },
