@@ -9,7 +9,8 @@ export const GROUP: Type = {
 	},
 
 	validate(nodeDef: NodeDefinition, node: Node): void {
-		if (node.getValue().length > 0 || node.getTextLines().length > 0) {
+		// Forma del valor NONE (STXT-SCHEMA-SPEC 9.2): ni valor inline ni bloque '>>'
+		if (node.getValue().length > 0 || node.isTextNode()) {
 			throw new ValidationException(node.getLine(),"INVALID_VALUE",`Node '${node.getName()}' has to be empty`);
 		}
 	},

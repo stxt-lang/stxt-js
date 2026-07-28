@@ -5,6 +5,7 @@ import { Node } from "../core/Node";
 import { ValidationException } from "../exceptions/ValidationException";
 import { RuntimeException } from "../exceptions/RuntimeException";
 import { NameNamespaceParser } from "../core/NameNamespaceParser";
+import { TypeRegistry } from "./TypeRegistry";
 
 export function transformNodeToSchema(node: Node): Schema {
     // Node name
@@ -71,6 +72,10 @@ function createFrom(n: Node, namespace: string): NodeDefinition {
 
     const children = n.getChild("children");
     if (children) {
+        // Error de schema 13.5: Children en un Node cuyo tipo no admite hijos
+        if (!TypeRegistry.admitsChildren(type)) {
+            throw new ValidationException(children.getLine(), "CHILDREN_NOT_ALLOWED_FOR_TYPE", `Type ${type} does not allow children (node ${name})`);
+        }
         for (const child of children.getChildrenByName("child")) {
             putChildToSchemaNode(result, child, namespace);
         }
@@ -111,7 +116,15 @@ function putChildToSchemaNode(schemaNode: NodeDefinition, child: Node, defNamesp
     const name = ns.getName();
     const namespace = ns.getNamespace();
 
-    const schemaChild = new ChildDefinition(name, namespace, getInteger(child, "min"), getInteger(child, "max"), child.getLine());
+    const min = getInteger(child, "min");
+    const max = getInteger(child, "max");
+
+    // Cardinalidad inválida si Min > Max (STXT-SCHEMA-SPEC 10 y 13.7)
+    if (min !== null && max !== null && min > max) {
+        throw new ValidationException(child.getLine(), "MIN_GREATER_THAN_MAX", `Min ${min} greater than Max ${max}`);
+    }
+
+    const schemaChild = new ChildDefinition(name, namespace, min, max, child.getLine());
     schemaNode.addChildDefinition(schemaChild);
 }
 

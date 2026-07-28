@@ -9,6 +9,11 @@ export const URL: Type = {
 	},
 
 	validate(ndef: NodeDefinition, n: Node): void {
+		// Forma del valor INLINE (STXT-SCHEMA-SPEC 9.4): no admite bloque '>>'
+		if (n.isTextNode()) {
+			throw new ValidationException(n.getLine(), "NOT_ALLOWED_TEXT", `Not allowed text in node ${n.getQualifiedName()}`);
+		}
+
 		const url = n.getValue();
 
 		try {

@@ -4,6 +4,9 @@ import { NamespaceValidator } from "./NamespaceValidator";
 import { StringUtils } from "./StringUtils";
 
 export class Node {
+	// STXT-SPEC 4.2: letras y dígitos Unicode (categorías L y Nd) más '-', '_' y espacio
+	private static readonly VALID_NAME = /^[\p{L}\p{Nd}\-_ ]+$/u;
+
 	private readonly name: string;
 	private readonly normalizedName: string;
 	private readonly namespace: string;
@@ -14,7 +17,6 @@ export class Node {
 	private readonly line: number;
 	private readonly level: number;
 	private children: Node[] = [];
-	private isFrozen = false;
 
 	constructor(line: number,level: number,name: string,namespace: string | null | undefined,textNode: boolean,value: string | null | undefined) {
 		this.level = level;
@@ -30,6 +32,10 @@ export class Node {
 
 		if (this.value.length > 0 && this.isTextNode()) {
 			throw new RuntimeException("INLINE_VALUE_NOT_VALID", "Not empty value with textNode");
+		}
+
+		if (!Node.VALID_NAME.test(name)) {
+			throw new ParseException(line, "INVALID_NODE_NAME", `Node name contains invalid characters: ${name}`);
 		}
 
 		if (this.normalizedName.length === 0) {
@@ -64,9 +70,6 @@ export class Node {
 	}
 
 	addChild(node: Node): void {
-		if (this.isFrozen) {
-			throw new RuntimeException("NODE_FROZEN", "Node is frozen");
-		}
 		this.children.push(node);
 	}
 
@@ -92,21 +95,6 @@ export class Node {
 
 	getText(): string {
 		return this.isTextNode() ? this.textLines.join("\n") : this.value;
-	}
-
-	freeze(): void {
-		if (this.isFrozen) {
-			return;
-		}
-
-		for (const n of this.children) {
-			n.freeze();
-		}
-
-		Object.freeze(this.children);
-		Object.freeze(this.textLines);
-
-		this.isFrozen = true;
 	}
 
 	getChild(cname: string, namespace?: string): Node | null {

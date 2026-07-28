@@ -4,17 +4,17 @@ import { NodeDefinition } from "../NodeDefinition";
 import { Type } from "../Type";
 import { binaryValue } from "./binaryValue";
 
-export const HEXADECIMAL: Type = {
+export const BINARY: Type = {
 	getName(): string {
-		return "HEXADECIMAL";
+		return "BINARY";
 	},
 
-	// STXT-SCHEMA-SPEC 9.5: cadena [0-9A-Fa-f]+ (sin prefijo '#' ni longitud par)
+	// STXT-SCHEMA-SPEC 9.5: cadena [01]+
 	validate(ndef: NodeDefinition, n: Node): void {
 		const value = binaryValue(n);
 
-		if (!/^[0-9A-Fa-f]+$/.test(value)) {
-			throw new ValidationException(n.getLine(), "INVALID_VALUE", `${n.getName()}: Invalid hexadecimal (${value})`);
+		if (!/^[01]+$/.test(value)) {
+			throw new ValidationException(n.getLine(), "INVALID_VALUE", `${n.getName()}: Invalid binary (${value})`);
 		}
 	},
 };

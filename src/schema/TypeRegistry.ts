@@ -10,12 +10,16 @@ import { INTEGER } from "./type/INTEGER";
 import { NATURAL } from "./type/NATURAL";
 import { NUMBER } from "./type/NUMBER";
 import { DATE } from "./type/DATE";
+import { TIME } from "./type/TIME";
 import { TIMESTAMP } from "./type/TIMESTAMP";
+import { UUID } from "./type/UUID";
+import { BINARY } from "./type/BINARY";
 import { EMAIL } from "./type/EMAIL";
 import { HEXADECIMAL } from "./type/HEXADECIMAL";
 import { BASE64 } from "./type/BASE64";
 import { GROUP } from "./type/GROUP";
 import { ENUM } from "./type/ENUM";
+import { MARKDOWN } from "./type/MARKDOWN";
 
 export class TypeRegistry {
     private static readonly REGISTRY: Map<string, Type> = new Map();
@@ -34,15 +38,24 @@ export class TypeRegistry {
         TypeRegistry.register(NATURAL);
         TypeRegistry.register(NUMBER);
         TypeRegistry.register(DATE);
+        TypeRegistry.register(TIME);
         TypeRegistry.register(TIMESTAMP);
+        TypeRegistry.register(UUID);
         TypeRegistry.register(EMAIL);
         TypeRegistry.register(HEXADECIMAL);
+        TypeRegistry.register(BINARY);
         TypeRegistry.register(BASE64);
         TypeRegistry.register(GROUP);
         TypeRegistry.register(ENUM);
+        TypeRegistry.register(MARKDOWN);
 
         return true;
     })();
+
+    // STXT-SCHEMA-SPEC 9 / STXT-TEMPLATE-SPEC 15: sólo INLINE y GROUP admiten hijos
+    static admitsChildren(nodeType: string): boolean {
+        return nodeType === "INLINE" || nodeType === "GROUP";
+    }
 
     static get(nodeType: string): Type | undefined {
         // fuerza que se ejecute _init al cargar la clase (por si el bundler hiciera cosas raras)

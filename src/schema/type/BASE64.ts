@@ -3,25 +3,7 @@ import { ValidationException } from "../../exceptions/ValidationException";
 import { RuntimeException } from "../../exceptions/RuntimeException";
 import { NodeDefinition } from "../NodeDefinition";
 import { Type } from "../Type";
-import { StringUtils } from "../../core/StringUtils";
-
-// Decodifica/codifica base64 de forma isomorfa: usa Buffer en Node y
-// atob/btoa en el navegador (ambos operan sobre "binary strings").
-function base64Decode(raw: string): string {
-    const Buffer = (globalThis as any).Buffer;
-    if (typeof Buffer !== "undefined") {
-        return Buffer.from(raw, "base64").toString("binary");
-    }
-    return atob(raw);
-}
-
-function base64Encode(binary: string): string {
-    const Buffer = (globalThis as any).Buffer;
-    if (typeof Buffer !== "undefined") {
-        return Buffer.from(binary, "binary").toString("base64");
-    }
-    return btoa(binary);
-}
+import { binaryValue } from "./binaryValue";
 
 export const BASE64: Type = {
     getName(): string {
@@ -29,15 +11,15 @@ export const BASE64: Type = {
     },
 
     validate(ndef: NodeDefinition, n: Node): void {
-        const raw = StringUtils.cleanSpaces(n.getText());
+        const raw = binaryValue(n);
 
         try {
-            // Intentamos decodificar (Buffer en Node, atob en navegador)
-            const decoded = base64Decode(raw);
+            // Intentamos decodificar
+            const buf = Buffer.from(raw, "base64");
 
             // Re-encode para verificar consistencia
             // (evita aceptar cadenas parcialmente válidas)
-            const reencoded = base64Encode(decoded);
+            const reencoded = buf.toString("base64");
 
             // Normalizamos padding para comparar
             const normalizedInput = raw.replace(/=+$/, "");

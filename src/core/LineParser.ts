@@ -7,17 +7,21 @@ export function parseLine(line: string, lastNodeBlock: boolean, lastLevel: numbe
 	let level = 0;
 	let spaces = 0;
 	let pointer = 0;
+	let sawSpace = false;
+	let sawTab = false;
 
 	while (pointer < line.length) {
 		const c = line.charAt(pointer);
 
 		if (c === Constants.SPACE) {
+			sawSpace = true;
 			spaces++;
 			if (spaces === Constants.TAB_SPACES) {
 				level++;
 				spaces = 0;
 			}
 		} else if (c === Constants.TAB) {
+			sawTab = true;
 			level++;
 			spaces = 0;
 		} else if (c === Constants.COMMENT_CHAR) {
@@ -29,7 +33,13 @@ export function parseLine(line: string, lastNodeBlock: boolean, lastLevel: numbe
 
 		// Dentro del bloque de texto
 		if (lastNodeBlock && level > lastLevel) {
-			return new Line(level, StringUtils.rightTrim(line.substring(pointer + 1)), false, true, pointer);
+			const text = StringUtils.rightTrim(line.substring(pointer + 1));
+			// El prefijo que cubre el nivel de bloque debe ser homogéneo (spec 10.2, regla 2);
+			// las líneas vacías se preservan siempre y quedan exentas (spec 10.3)
+			if (validate && sawSpace && sawTab && text.length > 0) {
+				throw new ParseException(numLine, "MIXED_INDENTATION", `Mixed tabs and spaces in indentation`);
+			}
+			return new Line(level, text, false, true, pointer);
 		}
 
 		// Aumentamos pointer
@@ -44,6 +54,11 @@ export function parseLine(line: string, lastNodeBlock: boolean, lastLevel: numbe
 			return new Line(level, "", false, true, pointer);
 		}
 		return new Line(level, "", false, false, pointer);
+	}
+
+	// Mezcla de espacios y tabuladores en la indentación (spec 8.1 y 8.3)
+	if (validate && sawSpace && sawTab) {
+		throw new ParseException(numLine, "MIXED_INDENTATION", `Mixed tabs and spaces in indentation`);
 	}
 
 	// Indentación no es múltiplo de 4 con espacios

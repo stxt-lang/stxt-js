@@ -9,8 +9,9 @@ export const BLOCK: Type = {
 	},
 
 	validate(nodeDef: NodeDefinition, node: Node): void {
-		if (node.getValue().length > 0) {
-			throw new ValidationException(node.getLine(),"NOT_ALLOWED_VALUE",`Not allowed inline text in node ${node.getQualifiedName()}`);
+		// Forma del valor BLOCK (STXT-SCHEMA-SPEC 9.2): sólo bloque '>>', no forma inline
+		if (!node.isTextNode()) {
+			throw new ValidationException(node.getLine(),"BLOCK_FORM_REQUIRED",`Node ${node.getQualifiedName()} requires block form '>>'`);
 		}
 	},
 };

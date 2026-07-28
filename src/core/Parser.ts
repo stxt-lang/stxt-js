@@ -39,6 +39,12 @@ export class Parser {
 
 		const lines = content.split(/\r?\n/);
 
+		// El salto de línea final es terminador de la última línea, no una línea
+		// vacía adicional (evita añadir una línea espuria a un bloque >> en EOF, spec 10.3)
+		if (lines.length > 0 && lines[lines.length - 1] === "") {
+			lines.pop();
+		}
+
 		for (const line of lines) {
 			lineNumber++;
 			this.processLine(line, lineNumber, stack, documents, result);
@@ -127,7 +133,6 @@ export class Parser {
 	private closeToLevel(stack: Node[], documents: Node[], targetLevel: number, result: ParseResult): void {
 		while (stack.length > targetLevel) {
 			const completed = stack.pop()!;
-			completed.freeze();
 
 			// Pasamos validators
 			this.validators.forEach(validator => {

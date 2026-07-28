@@ -9,7 +9,8 @@ export const ENUM: Type = {
     },
 
     validate(nodeDef: NodeDefinition, node: Node): void {
-        if (node.getTextLines().length > 0) {
+        // Forma del valor INLINE (STXT-SCHEMA-SPEC 9.3): no admite bloque '>>'
+        if (node.isTextNode()) {
             throw new ValidationException(node.getLine(),"NOT_ALLOWED_TEXT",`Not allowed text in node ${node.getQualifiedName()}`);
         }
 

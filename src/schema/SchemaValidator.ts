@@ -55,7 +55,22 @@ export class SchemaValidator implements Validator {
         }
 
         errors.push(...SchemaValidator.validateValue(schemaNode, node));
+        errors.push(...SchemaValidator.validateChildrenDeclared(schemaNode, node));
         errors.push(...SchemaValidator.validateCount(schemaNode, node));
+
+        return errors;
+    }
+
+    // Modelo de contenido cerrado (STXT-SCHEMA-SPEC, sección 6): solo se permiten
+    // los hijos directos declarados en la definición del padre; sin Children, cierre total
+    private static validateChildrenDeclared(nodeDef: NodeDefinition, node: Node): ValidationException[] {
+        const errors: ValidationException[] = [];
+
+        for (const child of node.getChildren()) {
+            if (!nodeDef.getChildren().has(child.getQualifiedName())) {
+                errors.push(new ValidationException(child.getLine(), "CHILD_NOT_DECLARED", `Child '${child.getQualifiedName()}' not declared in node '${node.getQualifiedName()}'`));
+            }
+        }
 
         return errors;
     }

@@ -1,2 +1,4 @@
 Inicializar el proyecto con: npm install
-Par ir compilando hacer: npm run watch
+
+Compilar el proyecto (src -> out): npm run build
+Compilar en modo watch (recompila al guardar): npm run watch
