@@ -18,6 +18,23 @@ The normative language spec is **not** in this repo: it lives in the sibling rep
 
 Consult those files before changing parser or schema semantics; behaviour changes here should follow the spec, not redefine it.
 
+## Roadmap: stxt-vscode consuming this as an npm dependency (not started — decide in a future session)
+
+The stated goal (see Project) is for `../stxt-vscode/stxt` to stop keeping its own copy of the parser/schema classes and instead `npm`-depend on this repo. As of this writing that hasn't happened yet — `../stxt-vscode/stxt/src` still has a full duplicate of `core/`, `schema/`, `runtime/`, `processors/`, `exceptions/`, `template/`, `test/` (54 files). A full diff confirmed every one of those files is byte-identical to this repo except one cosmetic line in `test/corpus.ts` (a path-depth constant) — so the two copies have **not diverged**, and consolidating later carries no risk of silently dropping a fix that only landed on one side.
+
+Three gaps block extraction, all on this repo's side:
+
+1. **`src/all.ts` does not exist**, despite `package.json` already pointing `main`/`types` at `out/all.js`/`out/all.d.ts` (see "Public API" below) — those fields currently reference a file `tsc` never produces. Needs to be created, exporting at least: `Node`, `Parser`, `ParseResult`, `Line`, `Constants`, `parseLine`, `StringUtils`, `Schema`, `SchemaValidator`, `SchemaProvider`, `NodeDefinition`, `ChildDefinition`, `UnifiedSchemaProvider`, `ConditionalValidator`, `Observer`, `NodeWriter`, `IndentStyle`, `ParseException`, `transformNodeToSchema`, `transformTemplateNodeToSchema` — this list was derived from what `../stxt-vscode/stxt`'s extension-only files (`AnalysisDoc.ts`, `AnalysisResult.ts`, `CompletionProvider.ts`, `CompletionProviderSearch.ts`, `FormattingProvider.ts`, `SchemaLoader.ts`, `TokenGeneratorObserver.ts`) actually import today from their local copy.
+2. **No `"prepare"` script.** `out/` is git-ignored and not committed, so installing this package as a `file:`/git dependency needs `"prepare": "npm run build"` to regenerate it on install.
+3. **No `"files"` field / `.npmignore`**, so a packaged/`file:`-installed copy would ship more than `out/`.
+
+Planned sequence once this is picked up: (1) add `src/all.ts`; (2) add `prepare` + `files` to `package.json`; (3) confirm build+tests still pass; (4) in `stxt-vscode/stxt/package.json` add `"stxt-parser-js": "file:../stxt-js"`; (5) rewrite the 7 extension files above to import from `"stxt-parser-js"` instead of relative paths; (6) delete the duplicated folders under `stxt-vscode/stxt/src`.
+
+Open decisions, still to make:
+
+- **Distribution mechanism.** `file:../stxt-js` is enough while both repos live as sibling folders on one machine. It won't work once this needs to build outside that machine (CI, another developer) — at that point this should move to a real package registry instead.
+- **Public repo / package naming.** The intent is to eventually open-source this (and `stxt-vscode`) under a public GitHub org — first choice `stxt-lang` (already the placeholder in `package.json`'s `repository.url`), falling back to the shorter `stxt` if that name/org is available. That decision also determines the eventual published npm package name — `stxt-parser-js` is just a placeholder from before publishing was on the table.
+
 ## Commands
 
 ```bash
@@ -69,7 +86,7 @@ Schemas themselves are written in STXT. Two reserved namespaces drive this:
 
 ### Public API
 
-[src/all.ts](src/all.ts) is the package's entry barrel (`main`/`types` in `package.json` point at its compiled `out/all.js`/`out/all.d.ts`) and the canonical list of exported API. Anything new that should be usable by consumers (e.g. the VSCode extension) must be re-exported here.
+`src/all.ts` is meant to be the package's entry barrel — `package.json`'s `main`/`types` already point at its compiled `out/all.js`/`out/all.d.ts` — but **the file doesn't exist yet** (see Roadmap above). Once created, anything new that should be usable by consumers (e.g. the VSCode extension) must be re-exported from it.
 
 ## Conventions
 
