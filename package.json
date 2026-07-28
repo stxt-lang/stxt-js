@@ -1,6 +1,6 @@
 {
   "name": "@stxt-lang/core",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "description": "Parser and schema validator for STXT, an indentation-based structured-text format.",
   "main": "out/all.js",
   "types": "out/all.d.ts",
@@ -9,14 +9,14 @@
   },
   "files": [
     "out/all.js",
-    "out/all.js.map",
     "out/all.d.ts",
     "out/core",
     "out/exceptions",
     "out/processors",
     "out/runtime",
     "out/schema",
-    "out/template"
+    "out/template",
+    "!out/**/*.js.map"
   ],
   "scripts": {
     "build": "tsc",
@@ -30,9 +30,24 @@
     "type": "git",
     "url": "git+https://github.com/stxt-lang/stxt-js.git"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": [
+    "stxt",
+    "semantic text",
+    "parser",
+    "schema",
+    "validation",
+    "structured text",
+    "indentation",
+    "markup",
+    "text format",
+    "dsl"
+  ],
+  "author": "Joan Costa Mombiela <joan.costa.mombiela@gmail.com>",
+  "license": "MIT",
+  "homepage": "https://stxt.dev",
+  "bugs": {
+    "url": "https://github.com/stxt-lang/stxt-js/issues"
+  },
   "devDependencies": {
     "@types/mocha": "^10.0.10",
     "@types/node": "22.x",

@@ -11,6 +11,7 @@ export { parseLine } from "./core/LineParser";
 export { StringUtils } from "./core/StringUtils";
 
 export { ParseException } from "./exceptions/ParseException";
+export { ValidationException } from "./exceptions/ValidationException";
 
 export { Observer } from "./processors/Observer";
 
