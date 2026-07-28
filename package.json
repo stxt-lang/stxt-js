@@ -2,11 +2,14 @@
   "name": "stxt-parser-js",
   "version": "1.0.0",
   "description": "",
-  "type": "module",
   "main": "out/all.js",
+  "types": "out/all.d.ts",
   "scripts": {
     "build": "tsc",
-    "watch": "tsc --watch"
+    "watch": "tsc --watch",
+    "lint": "eslint src --ext .ts",
+    "pretest": "npm run build && npm run lint",
+    "test": "mocha \"out/test/**/*.test.js\""
   },
   "repository": {
     "type": "git",
@@ -16,6 +19,12 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@types/mocha": "^10.0.10",
+    "@types/node": "22.x",
+    "@typescript-eslint/eslint-plugin": "^5.62.0",
+    "@typescript-eslint/parser": "^5.62.0",
+    "eslint": "^8.57.1",
+    "mocha": "^11.7.5",
     "typescript": "^5.5.4"
   }
 }

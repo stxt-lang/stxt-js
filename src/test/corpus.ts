@@ -29,7 +29,7 @@ export function findStxtWeb(): string | undefined {
 	const candidates = [
 		process.env.STXT_WEB,
 		// __dirname es <repo>/out/test
-		path.resolve(__dirname, "..", "..", "..", "..", "stxt-web"),
+		path.resolve(__dirname, "..", "..", "..", "stxt-web"),
 	];
 
 	for (const candidate of candidates) {

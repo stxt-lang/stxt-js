@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-A TypeScript parser for **STXT**, an indentation-based structured-text format. The library is bundled (via Rollup) into a single browser-targeted ES module — there are no Node-only runtime APIs in `src/`, so keep it browser-safe.
+A TypeScript parser for **STXT**, an indentation-based structured-text format. It compiles (via `tsc`) to a plain CommonJS Node package (`out/`) meant to be consumed as a dependency — notably by the `../stxt-vscode/stxt` extension — rather than bundled into a browser artifact.
 
 This repo holds **all the STXT parser/schema classes for the JS/TS ecosystem** — it is the single source of truth for that logic in this language, not just one consumer among several. The sibling repo `../stxt-vscode/stxt` (the VSCode extension) imports this project as a Node dependency and contains **only** extension-specific code (commands, language server glue, UI); it must not have its own copies of parser/schema classes. When extension work seems to need parser/schema changes, make them here and have the extension consume the updated dependency.
 
@@ -21,16 +21,15 @@ Consult those files before changing parser or schema semantics; behaviour change
 ## Commands
 
 ```bash
-npm run build              # Rollup bundles src/all.ts -> WebContent/js/stxt-parser.js (ES module + sourcemap)
-npm run watch              # build in watch mode
-npm run minify             # terser -> WebContent/js/stxt-parser.min.js (run after build)
-npm run test               # runs src/test/hello.ts
-npm run test <name>        # bundles src/test/<name>.ts and runs it with node (e.g. npm run test mytest)
+npm run build   # tsc: src/**/*.ts -> out/**/*.js (+ .d.ts + sourcemaps)
+npm run watch   # build in watch mode
+npm run lint    # eslint src --ext .ts
+npm test        # pretest (build + lint), then mocha over out/test/**/*.test.js
 ```
 
-There is no test framework. `run-test.js` bundles a single `src/test/<name>.ts` entry with `rollup.config.test.js` into `dist/<name>.js` and runs it with `node`; a "test" is a standalone script that exercises the public API (see [src/test/hello.ts](src/test/hello.ts)). To add one, drop a new `.ts` file in `src/test/` and run `npm run test <name>`.
+See [help.txt](help.txt) for details on running tests. Tests are mocha `describe`/`it` suites under `src/test/*.test.ts` (compiled alongside the library, not a separate bundle) that run as regression checks against the real corpus in the sibling repo `../stxt-web` — they're skipped as "pending" rather than failing if that sibling isn't present, and `STXT_WEB=/path` overrides the lookup.
 
-TypeScript is compiled by `@rollup/plugin-typescript` during bundling; `tsconfig.json` has `strict` + `noEmitOnError`, so type errors fail the build. There is no separate `tsc` lint step.
+`tsconfig.json` has `strict` + `noEmitOnError`, so type errors fail the build.
 
 ## Architecture
 
@@ -70,7 +69,7 @@ Schemas themselves are written in STXT. Two reserved namespaces drive this:
 
 ### Public API
 
-[src/all.ts](src/all.ts) is the Rollup entry barrel and the canonical list of exported API. Anything new that should be usable from the bundle must be re-exported here.
+[src/all.ts](src/all.ts) is the package's entry barrel (`main`/`types` in `package.json` point at its compiled `out/all.js`/`out/all.d.ts`) and the canonical list of exported API. Anything new that should be usable by consumers (e.g. the VSCode extension) must be re-exported here.
 
 ## Conventions
 
