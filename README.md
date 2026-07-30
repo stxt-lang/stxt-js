@@ -6,6 +6,7 @@ STXT is a plain-text format for writing structured, semantic documents: no brace
 
 - Website and language reference: <https://stxt.dev>
 - VSCode extension: [STXT - Semantic Text](https://marketplace.visualstudio.com/items?itemName=stxt-lang.stxt)
+- Java implementation: [`dev.stxt:stxt-core`](https://central.sonatype.com/artifact/dev.stxt/stxt-core) on Maven Central
 
 ## What STXT looks like
 
