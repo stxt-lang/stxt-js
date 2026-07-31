@@ -20,9 +20,13 @@ Consult those files before changing parser or schema semantics; behaviour change
 
 ## Next up (as of 2026-07-31)
 
-**0.5.3 is written but not released.** `package.json` says `0.5.3` and the working tree holds the documentation release that realigns this repo with `dev.stxt:stxt-core` 0.5.3 (published from `../stxt-java` on 2026-07-31): every source comment translated to English and a JSDoc comment on every exported member, which `tsc` copies into `out/**/*.d.ts` — the TypeScript counterpart of the javadoc Java publishes. `npm test` is 224 passing. Still to do: commit, tag, `npm publish`, and bump the range in `stxt-vscode/stxt/package.json` (the 0.5.3 CHANGELOG entry is already written there).
+**`@stxt-lang/core@0.5.3` was published on 2026-07-31 and verified from the registry** (115 files, 173.7 kB unpacked, README + LICENSE in, no `.js.map`, no `out/test`, JSDoc travelling in the `.d.ts`). Commit `eb98af7`, annotated tag `v0.5.3` pushed. `npm test` is 224 passing.
 
-The only user-visible change is the `NOT_STXT_SCHEMA` message, now `Expected schema(...) but got ...` like Java's; the code is unchanged and the exports of `all.ts` are untouched.
+It is the documentation release that realigns this repo with `dev.stxt:stxt-core` 0.5.3 (published from `../stxt-java` the same day): every source comment translated to English and a JSDoc comment on every exported member, which `tsc` copies into `out/**/*.d.ts` — the TypeScript counterpart of the javadoc Java publishes to javadoc.io. The only user-visible change is the `NOT_STXT_SCHEMA` message, now `Expected schema(...) but got ...` like Java's; the code is unchanged and the exports of `all.ts` are untouched.
+
+**The one thing left is the extension side of the release**: `../stxt-vscode/stxt` is still on `"version": "0.5.2"` with `"@stxt-lang/core": "^0.5.2"`, and its 0.5.3 CHANGELOG entry (already written) is uncommitted. Step 6 of [RELEASING.md](RELEASING.md) covers it.
+
+The release procedure itself is now written down in [RELEASING.md](RELEASING.md), mirroring `../stxt-java/RELEASING.md`. It was drafted while doing 0.5.3, so its numbers (115 files, 41.9 kB packed) are the real ones of that release.
 
 0.5.2 (2026-07-28) closed the "polish the package's public face" list — README, LICENSE, npm metadata, tags, source maps, lock file — plus the `ValidationException` export. Both tags are in place and pushed: `v0.5.2` at `604477c` and `v0.5.1` retroactively at `a25e88e` (the `gitHead` the publish recorded). **Tagging is now part of the release routine**, and the tags here are annotated (`git tag -a -m "..."` — pass `-m` or git opens an editor).
 
@@ -36,7 +40,7 @@ Ideas for whenever there is a next release, none urgent:
 
 The step-by-step release procedure lives in [RELEASING.md](RELEASING.md) (mirroring `../stxt-java/RELEASING.md`); this section is the *why* behind it.
 
-This repo is published to npm as **`@stxt-lang/core`** — first release **0.5.1 on 2026-07-28**, **0.5.2 the same day**. The name was chosen over `@stxt-lang/parser` / `@stxt-lang/js` because "core" leaves room for future sibling JS packages (a CLI, a language server) without competing for the "main" name. The GitHub org `stxt-lang` and the npm scope `@stxt-lang` are both reserved by the user (the org also hosts `stxt-vscode`, `stxt-java`, `stxt-web`, `stxt-python`, `stxt-cms`, `stxt-impl`).
+This repo is published to npm as **`@stxt-lang/core`** — first release **0.5.1 on 2026-07-28**, **0.5.2 the same day**, **0.5.3 on 2026-07-31**. The name was chosen over `@stxt-lang/parser` / `@stxt-lang/js` because "core" leaves room for future sibling JS packages (a CLI, a language server) without competing for the "main" name. The GitHub org `stxt-lang` and the npm scope `@stxt-lang` are both reserved by the user (the org also hosts `stxt-vscode`, `stxt-java`, `stxt-web`, `stxt-python`, `stxt-cms`, `stxt-impl`).
 
 Packaging facts worth knowing before touching `package.json`:
 
@@ -45,7 +49,7 @@ Packaging facts worth knowing before touching `package.json`:
 - `"prepare": "npm run build"` regenerates `out/` on install, and `"files"` is scoped to `out/all.js`, `out/all.d.ts` plus the `core`/`exceptions`/`processors`/`runtime`/`schema`/`template` subfolders — deliberately excluding `out/test` (build output of this repo's own regression tests) and, via the `"!out/**/*.js.map"` negation, the source maps (they dangled, because `src/` isn't published).
 - The licence is **MIT** across the `stxt-lang` org, copyright `stxt-lang`: `LICENSE` here, `LICENSE.txt` in `../stxt-vscode/stxt`. `package.json` said `ISC` until 0.5.2.
 
-The 0.5.2 tarball is 115 files / 27 kB (0.5.1 was 169 / 38 KB): `.js` and `.d.ts` for the barrel plus the six subfolders, plus `README.md` and `LICENSE`.
+The 0.5.3 tarball is 115 files / 41.9 kB packed / 173.7 kB unpacked (0.5.2 was the same 115 files but 27 kB — the difference is the JSDoc; 0.5.1 was 169 files / 38 kB): `.js` and `.d.ts` for the barrel plus the six subfolders, plus `README.md` and `LICENSE`.
 
 ## How `../stxt-vscode/stxt` consumes this
 
