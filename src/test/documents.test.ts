@@ -5,34 +5,34 @@ import { Parser } from "../core/Parser";
 import { corpusFiles, describeCorpus, describeErrors, DOC_DIRS, loadProvider, parseWithSchemas } from "./corpus";
 
 /**
- * Regresión de validación: los documentos reales de stxt-web deben parsear sin
- * errores y validar sin avisos contra los schemas/templates del propio stxt-web.
+ * Validation regression: the real documents of stxt-web must parse with no errors
+ * and validate with no warnings against the schemas/templates of stxt-web itself.
  *
- * Es la comprobación que antes se hacía a mano tras cada cambio de conformidad.
+ * This is the check that used to be done by hand after every conformance change.
  */
-describeCorpus("Documentos de stxt-web", root => {
+describeCorpus("Documents of stxt-web", root => {
 	const provider = loadProvider(root);
 	const files = corpusFiles(root, DOC_DIRS);
 
-	it("el corpus no está vacío", () => {
-		assert.ok(files.length > 0, `no se ha encontrado ningún .stxt en ${DOC_DIRS.join(", ")}`);
+	it("the corpus is not empty", () => {
+		assert.ok(files.length > 0, `no .stxt file found in ${DOC_DIRS.join(", ")}`);
 	});
 
 	for (const file of files) {
 		const name = path.relative(root, file);
 
-		it(`valida ${name}`, () => {
+		it(`validates ${name}`, () => {
 			const result = parseWithSchemas(fs.readFileSync(file, "utf-8"), provider);
 			const errors = result.getErrors();
 
-			assert.strictEqual(errors.length, 0, `${name} tiene ${errors.length} error(es):${describeErrors(errors)}`);
-			assert.ok(result.getNodes().length > 0, `${name} no ha producido ningún nodo`);
+			assert.strictEqual(errors.length, 0, `${name} has ${errors.length} error(s):${describeErrors(errors)}`);
+			assert.ok(result.getNodes().length > 0, `${name} produced no node at all`);
 		});
 	}
 
-	it("todos los documentos declaran un namespace con schema conocido", () => {
-		// Si esto falla, los tests de arriba pasarían de forma trivial: sin
-		// namespace el ConditionalValidator no valida nada.
+	it("every document declares a namespace with a known schema", () => {
+		// If this fails, the tests above would pass trivially: with no namespace
+		// the ConditionalValidator validates nothing.
 		for (const file of files) {
 			const nodes = new Parser().parseResult(fs.readFileSync(file, "utf-8")).getNodes();
 
@@ -40,19 +40,19 @@ describeCorpus("Documentos de stxt-web", root => {
 				const namespace = node.getNamespace();
 				const name = `${path.relative(root, file)} → ${node.getName()}`;
 
-				assert.notStrictEqual(namespace, "", `${name}: documento sin namespace`);
-				assert.ok(provider.getSchema(namespace), `${name}: no hay schema para ${namespace}`);
+				assert.notStrictEqual(namespace, "", `${name}: document with no namespace`);
+				assert.ok(provider.getSchema(namespace), `${name}: there is no schema for ${namespace}`);
 			}
 		}
 	});
 });
 
 /**
- * Un mismo namespace está descrito en stxt-web dos veces: como schema
- * (`.stxt/schemas/`) y como template (`.stxt/templates/`). Como el template se
- * compila a Schema, ambos deben validar los documentos exactamente igual.
+ * One same namespace is described twice in stxt-web: as a schema (`.stxt/schemas/`)
+ * and as a template (`.stxt/templates/`). Since the template is compiled into a
+ * Schema, both must validate the documents exactly the same way.
  */
-describeCorpus("Equivalencia schema ↔ template", root => {
+describeCorpus("Schema ↔ template equivalence", root => {
 	const fromSchemas = loadProvider(root, [path.join(".stxt", "schemas")]);
 	const fromTemplates = loadProvider(root, [path.join(".stxt", "templates")]);
 	const files = corpusFiles(root, DOC_DIRS);
@@ -62,16 +62,16 @@ describeCorpus("Equivalencia schema ↔ template", root => {
 		const text = fs.readFileSync(file, "utf-8");
 		const namespaces = new Parser().parseResult(text).getNodes().map(node => node.getNamespace());
 
-		// Solo son comparables los documentos cuyo namespace está descrito de las dos formas.
+		// Only the documents whose namespace is described both ways are comparable.
 		if (!namespaces.every(ns => fromSchemas.getSchema(ns) && fromTemplates.getSchema(ns))) {
 			continue;
 		}
 
-		it(`mismo resultado en ${name}`, () => {
+		it(`same result in ${name}`, () => {
 			const codes = (provider: typeof fromSchemas) =>
-				parseWithSchemas(text, provider).getErrors().map(e => `[${e.code}] línea ${e.line}`);
+				parseWithSchemas(text, provider).getErrors().map(e => `[${e.code}] line ${e.line}`);
 
-			assert.deepStrictEqual(codes(fromTemplates), codes(fromSchemas), `${name}: el template y el schema no validan igual`);
+			assert.deepStrictEqual(codes(fromTemplates), codes(fromSchemas), `${name}: the template and the schema do not validate the same`);
 		});
 	}
 });

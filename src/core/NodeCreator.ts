@@ -4,6 +4,17 @@ import { Node } from "./Node";
 import { ParseException } from "../exceptions/ParseException";
 import { Constants } from "./Constants";
 
+/**
+ * Builds the node a line opens, telling apart the INLINE form (`Name: value`) from the BLOCK one
+ * (`Name >>`) and resolving the namespace against the parent.
+ *
+ * @param lineIndent line already split into indentation and content.
+ * @param lineNumber line number of the document where the node opens.
+ * @param level indentation level of the node.
+ * @param parent node currently open, whose namespace is inherited, or null at root level.
+ * @returns the node the line opens, still with no children and no text lines.
+ * @throws ParseException if the line is not a valid node declaration.
+ */
 export function createNode(lineIndent: Line, lineNumber: number, level: number, parent: Node | null): Node {
     const line = lineIndent.content;
 
@@ -38,7 +49,7 @@ export function createNode(lineIndent: Line, lineNumber: number, level: number, 
         throw new ParseException(lineNumber, "INLINE_VALUE_NOT_VALID", `Line not valid: ${line}`);
     }
 
-    // Namespace por defecto: heredado del padre
+    // Default namespace: inherited from the parent
     const nameNamespace = NameNamespaceParser.parse(
         name,
         parent ? parent.getNamespace() : null,
@@ -48,11 +59,11 @@ export function createNode(lineIndent: Line, lineNumber: number, level: number, 
     name = nameNamespace.getName();
     const namespace = nameNamespace.getNamespace();
 
-    // Validamos nombre
+    // Validate the name
     if (name.length === 0) {
         throw new ParseException(lineNumber, "INVALID_LINE", `Line not valid: ${line}`);
     }
 
-    // Creamos nodo
+    // Create the node
     return new Node(lineNumber, level, name, namespace, textNode, value);
 }

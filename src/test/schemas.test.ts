@@ -5,40 +5,40 @@ import { UnifiedSchemaProvider } from "../runtime/UnifiedSchemaProvider";
 import { corpusFiles, describeCorpus, SCHEMA_DIRS } from "./corpus";
 
 /**
- * Regresión de carga: todos los schemas y templates reales de stxt-web deben
- * parsear, validar contra su meta-schema y transformarse a Schema sin excepción.
+ * Loading regression: every real schema and template of stxt-web must parse,
+ * validate against its meta-schema and be transformed into a Schema without exception.
  *
- * Cada fichero se carga en un provider propio para que un fallo señale el
- * fichero culpable y no se enmascare con los demás.
+ * Each file is loaded into a provider of its own so that a failure points at the
+ * guilty file instead of being masked by the others.
  */
-describeCorpus("Schemas y templates de stxt-web", root => {
+describeCorpus("Schemas and templates of stxt-web", root => {
 	const files = corpusFiles(root, SCHEMA_DIRS);
 
-	it("el corpus no está vacío", () => {
-		assert.ok(files.length > 0, `no se ha encontrado ningún .stxt en ${path.join(root, SCHEMA_DIRS[0])}`);
+	it("the corpus is not empty", () => {
+		assert.ok(files.length > 0, `no .stxt file found in ${path.join(root, SCHEMA_DIRS[0])}`);
 	});
 
 	for (const file of files) {
-		it(`carga ${path.relative(root, file)}`, () => {
+		it(`loads ${path.relative(root, file)}`, () => {
 			const provider = new UnifiedSchemaProvider();
 			provider.addFile(fs.readFileSync(file, "utf-8"));
 
 			assert.ok(
 				provider.getAllSchemas().length > 0,
-				"el fichero no ha producido ningún schema (¿namespace raíz distinto de @stxt.schema/@stxt.template?)"
+				"the file produced no schema at all (root namespace other than @stxt.schema/@stxt.template?)"
 			);
 		});
 	}
 
-	it("todos juntos se cargan en un único provider", () => {
+	it("all of them load together into a single provider", () => {
 		const provider = new UnifiedSchemaProvider();
 
 		for (const file of files) {
 			provider.addFile(fs.readFileSync(file, "utf-8"));
 		}
 
-		// Schemas y templates comparten namespace a propósito (mismo modelo
-		// descrito de dos formas), así que hay menos schemas que ficheros.
+		// Schemas and templates share a namespace on purpose (the same model
+		// described in two ways), so there are fewer schemas than files.
 		assert.ok(provider.getAllSchemas().length > 0);
 	});
 });

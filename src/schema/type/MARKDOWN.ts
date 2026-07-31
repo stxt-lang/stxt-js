@@ -3,8 +3,10 @@ import { ValidationException } from "../../exceptions/ValidationException";
 import { NodeDefinition } from "../NodeDefinition";
 import { Type } from "../Type";
 
-// STXT-SCHEMA-SPEC 9.7: a efectos de validación equivale a TEXT
-// (cualquier contenido es válido; solo se prohíben hijos)
+/**
+ * `MARKDOWN` type. STXT-SCHEMA-SPEC 9.7: for validation purposes it is equivalent to TEXT
+ * (any content is valid Markdown); only children are forbidden.
+ */
 export const MARKDOWN: Type = {
 	getName(): string {
 		return "MARKDOWN";

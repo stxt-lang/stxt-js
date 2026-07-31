@@ -1,6 +1,6 @@
-// Punto de entrada público del paquete (out/all.js / out/all.d.ts).
-// Todo lo que deba ser consumible por terceros (p. ej. la extensión VSCode)
-// debe re-exportarse desde aquí.
+// Public entry point of the package (out/all.js / out/all.d.ts).
+// Anything that should be consumable by third parties (e.g. the VSCode extension)
+// has to be re-exported from here.
 
 export { Node } from "./core/Node";
 export { Parser } from "./core/Parser";

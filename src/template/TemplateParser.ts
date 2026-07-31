@@ -13,11 +13,19 @@ import { ChildLine } from "./ChildLine";
 import { ParseException } from "../exceptions/ParseException";
 import { TypeRegistry } from "../schema/TypeRegistry";
 
+/**
+ * Turns the tree of an already parsed `@stxt.template` document into an equivalent {@link Schema}.
+ *
+ * @param node root of the already parsed `@stxt.template` document.
+ * @returns the resulting {@link Schema}.
+ * @throws ValidationException if the template is not valid, with the line already shifted to the
+ *         one of the original document.
+ */
 export function transformTemplateNodeToSchema(node: Node): Schema {
-	// Insertamos namespace
+	// Set the namespace
 	const result = new Schema(node.getValue(), node.getLine(), undefined);
 
-	// Buscamos nodo structure
+	// Look for the structure node
 	const structure = node.getChild("structure");
 	if (!structure) {
 		throw new ValidationException(node.getLine(), "TEMPLATE_STRUCTURE_REQUIRED", "Template must define 'Structure >>'");
@@ -26,19 +34,19 @@ export function transformTemplateNodeToSchema(node: Node): Schema {
 	const text = structure.getText();
 	const offset = structure.getLine();
 
-	// Creamos un parser simple
+	// Build a plain parser
 	const parser = new Parser();
 
-	// Parseamos para los nodos
+	// Parse to get the nodes
 	try {
 		const nodes = parser.parse(text);
-		// Vamos iterando todos los nodos insertando
+		// Walk every node adding it to the schema
 		for (const n of nodes) {
 			addToSchema(result, n);
 		}
 	} catch (e) {
-		// ValidationException extiende ParseException: comprobar primero para no degradar
-		// la severidad (la extensión pinta ValidationException como Warning)
+		// ValidationException extends ParseException: check it first so the severity is not
+		// downgraded (the extension paints ValidationException as a Warning)
 		if (e instanceof ValidationException) {
 			throw new ValidationException(e.line + offset, e.code, e.message);
 		}
@@ -48,7 +56,7 @@ export function transformTemplateNodeToSchema(node: Node): Schema {
 		throw e;
 	}
 
-	// Buscamos descripciones
+	// Look for the descriptions
 	const description = node.getChild("description");
 	if (description) {
 		const text = description.getText();
@@ -66,17 +74,18 @@ export function transformTemplateNodeToSchema(node: Node): Schema {
 		}
 	}
 
-	// Retornamos resultado
+	// Return the result
 	return result;
 }
 
 
+/** Adds to the schema the definition a node of the structure declares, along with its children. */
 function addToSchema(schema: Schema, node: Node): void {
-	// Obtenemos nombre qualificado
+	// Get the qualified name
 	let namespace = node.getNamespace();
 	const name = node.getName();
 
-	// Miramos datos
+	// Look at the data
 	let cl: ChildLine = ChildLineParser.parse(node.getValue(), node.getLine());
 
 	if (!namespace || namespace === "") {
@@ -84,8 +93,8 @@ function addToSchema(schema: Schema, node: Node): void {
 	}
 
 	if (namespace !== schema.getNamespace()) {
-		// Un nodo externo solo puede declarar cardinalidad: ni tipo, ni valores ENUM,
-		// ni hijos (STXT-TEMPLATE-SPEC 6.4, 10 y 14.15)
+		// An external node may only declare cardinality: no type, no ENUM values
+		// and no children (STXT-TEMPLATE-SPEC 6.4, 10 and 14.15)
 		const type = cl.getType();
 		if (type && type.trim().length > 0) {
 			throw new ValidationException(node.getLine(), "TYPE_DEFINITION_NOT_ALLOWED", "Not allowed type definition in external namespaces");
@@ -100,20 +109,20 @@ function addToSchema(schema: Schema, node: Node): void {
 			throw new ValidationException(node.getLine(), "CHILDREN_NOT_ALLOWED_IN_EXTERNAL_NAMESPACE", `Not allowed children in external namespaces (node ${node.getName()})`);
 		}
 
-		// No hacemos nada con creación de nodos que no son de @stxt.template!!
+		// Nodes that do not belong to @stxt.template create nothing here!!
 		return;
 	}
 
-	// Miramos si es nuevo y añadimos en listado
+	// Check whether it is new and add it to the list
 	let schemaNode = schema.getNodeDefinition(name);
 
 	if (!schemaNode) {
-		// Nuevo
+		// New one
 		const type = cl.getType() ?? "INLINE";
 
-		// En este punto el schema ya contiene tanto las definiciones previas ya cerradas
-		// como los ancestros abiertos, así que una referencia que no resuelve aquí no
-		// resuelve a nada (STXT-TEMPLATE-SPEC 6.4 y 14.11)
+		// At this point the schema already holds both the previous definitions, already closed,
+		// and the open ancestors, so a reference that does not resolve here resolves to
+		// nothing (STXT-TEMPLATE-SPEC 6.4 and 14.11)
 		if (type.startsWith("@")) {
 			throw new ValidationException(node.getLine(), "REFERENCE_NOT_FOUND", `Reference '${type}' does not point to a previous definition or an open ancestor`);
 		}
@@ -128,9 +137,9 @@ function addToSchema(schema: Schema, node: Node): void {
 		const values = cl.getValues();
 		if (values) {
 			if (type !== "ENUM") {
-				// Mismo código que SchemaParser: un template es azúcar equivalente a un schema
-				// (STXT-TEMPLATE-SPEC 13), así que la misma condición no debe cambiar de código
-				// según la puerta de entrada
+				// Same code as SchemaParser: a template is sugar equivalent to a schema
+				// (STXT-TEMPLATE-SPEC 13), so the same condition must not change its code
+				// depending on the entry point
 				throw new ValidationException(node.getLine(), "VALUES_ONLY_SUPPORTED_BY_ENUM", `Values only supported for type ENUM, not for type ${type}`);
 			}
 			for (const v of values) {
@@ -138,7 +147,7 @@ function addToSchema(schema: Schema, node: Node): void {
 			}
 		}
 
-		// Un ENUM sin lista de valores es un template inválido (STXT-TEMPLATE-SPEC 9 y 13.7)
+		// An ENUM with no list of values is an invalid template (STXT-TEMPLATE-SPEC 9 and 13.7)
 		if (type === "ENUM" && (!values || values.length === 0)) {
 			throw new ValidationException(node.getLine(), "VALUES_EMPTY_FOR_ENUM", "ENUM Type must include values");
 		}
@@ -150,7 +159,7 @@ function addToSchema(schema: Schema, node: Node): void {
 
 		const reference = type.substring(1).trim();
 
-		// Referencia y tipo explícito en la misma línea (STXT-TEMPLATE-SPEC 14.13)
+		// Reference and explicit type on the same line (STXT-TEMPLATE-SPEC 14.13)
 		const explicitType = referenceType(reference, node.getNormalizedName());
 		if (explicitType) {
 			throw new ValidationException(node.getLine(), "REFERENCE_WITH_TYPE_NOT_ALLOWED", `Reference '@${node.getName()}' can not declare a type: ${explicitType}`);
@@ -160,8 +169,8 @@ function addToSchema(schema: Schema, node: Node): void {
 			throw new ValidationException(node.getLine(), "NODE_REFERENCE_NOT_VALID", `Reference must be '@${node.getName()}', not '${reference}'`);
 		}
 
-		// La referencia puede sobrescribir la cardinalidad, pero no redefinir valores
-		// ENUM ni hijos (STXT-TEMPLATE-SPEC 6.4)
+		// A reference may override the cardinality, but it may redefine neither the ENUM
+		// values nor the children (STXT-TEMPLATE-SPEC 6.4)
 		const values = cl.getValues();
 		if (values) {
 			throw new ValidationException(node.getLine(), "VALUES_NOT_ALLOWED_IN_REFERENCE", `Reference '@${node.getName()}' can not redefine ENUM values`);
@@ -174,15 +183,15 @@ function addToSchema(schema: Schema, node: Node): void {
 		return; // OK Definition
 	}
 
-	// Una vez ya existe, si tiene hijos los intentamos crear.
+	// Once it exists, try to create its children if it has any.
 	const childrenNode = node.getChildren();
 
-	// Error de template 14.9: nodo con hijos y tipo efectivo que no admite hijos
+	// Template error 14.9: node with children and an effective type that does not admit children
 	if (childrenNode.length > 0 && !TypeRegistry.admitsChildren(schemaNode.getType())) {
 		throw new ValidationException(node.getLine(), "CHILDREN_NOT_ALLOWED_FOR_TYPE", `Type ${schemaNode.getType()} does not allow children (node ${node.getName()})`);
 	}
 
-	// Insertamos childs
+	// Add the children
 	for (const child of childrenNode) {
 		cl = ChildLineParser.parse(child.getValue(), child.getLine());
 
@@ -200,11 +209,11 @@ function addToSchema(schema: Schema, node: Node): void {
 }
 
 /**
- * Distingue `@Nombre Nodo TIPO` (referencia + tipo, error 14.13) de `@Otro Nombre`
- * (referencia con nombre distinto, error 14.12). Como los nombres de nodo admiten
- * espacios, la única lectura fiable es: si el último token es un tipo conocido y lo
- * que queda delante es el nombre del propio nodo, la línea declara ambas cosas.
- * Devuelve el tipo declarado, o null si la referencia no lleva tipo.
+ * Tells `@Node Name TYPE` (reference + type, error 14.13) apart from `@Another Name`
+ * (reference with a different name, error 14.12). Since node names may contain spaces,
+ * the only reliable reading is: if the last token is a known type and what comes before
+ * it is the name of the node itself, the line is declaring both things.
+ * Returns the declared type, or null when the reference carries no type.
  */
 function referenceType(reference: string, normalizedName: string): string | null {
 	const cut = reference.lastIndexOf(" ");
@@ -222,31 +231,32 @@ function referenceType(reference: string, normalizedName: string): string | null
 	return null;
 }
 
+/** Attaches to the node definitions the descriptions declared in the `Description >>` block. */
 function addDescriptions(schema: Schema, nodes: Node[]) {
 	nodes.forEach((node) => {
-		// Obtenemos namespace
+		// Get the namespace
 		let namespace = node.getNamespace();
 		if (!namespace || namespace === "") {
 			namespace = schema.getNamespace();
 		}
 
-		// Validamos no external description
+		// No external descriptions
 		if (namespace !== schema.getNamespace()) {
 			throw new ValidationException(node.getLine(), "EXTERNAL_DESCRIPTION_NOT_ALLOWED", "Not allowed description in external namespaces");
 		}
 
-		// Validamos sin hijos
+		// No children either
 		if (node.getChildren().length > 0) {
 			throw new ValidationException(node.getLine(), "CHILDREN_DESCRIPTION_NOT_ALLOWED", "Not allowed children in description");
 		}
 
-		// Buscamos nodo de esquema
+		// Look for the node in the schema
 		const nodeDef = schema.getNodeDefinition(node.getName());
 		if (!nodeDef) {
 			throw new ValidationException(node.getLine(), "NODE_NOT_FOUND", `Not found node with name: ${node.getName()}`);
 		}
 
-		// No se permite más de una entrada por nodo (STXT-TEMPLATE-SPEC 12)
+		// No more than one entry per node is allowed (STXT-TEMPLATE-SPEC 12)
 		if (nodeDef.getDescription() !== undefined) {
 			throw new ValidationException(node.getLine(), "DESCRIPTION_ALREADY_DEFINED", `Exists a previous description for node: ${node.getName()}`);
 		}

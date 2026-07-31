@@ -6,12 +6,11 @@ import { IndentStyle, NodeWriter } from "../runtime/NodeWriter";
 import { corpusFiles, describeCorpus, describeErrors, DOC_DIRS, SCHEMA_DIRS } from "./corpus";
 
 /**
- * Regresión del writer (lo que comprobaba a mano el antiguo `src/test.ts`):
- * escribir un documento parseado y volver a parsearlo no debe perder ni
- * cambiar nada. Se prueba con los dos estilos de indentación, sobre todo el
- * corpus de stxt-web.
+ * Writer regression (what the old `src/test.ts` used to check by hand): writing a
+ * parsed document and parsing it again must neither lose nor change anything. It is
+ * tried with both indentation styles, over the whole stxt-web corpus.
  */
-describeCorpus("NodeWriter: ida y vuelta", root => {
+describeCorpus("NodeWriter: round trip", root => {
 	const files = [...corpusFiles(root, SCHEMA_DIRS), ...corpusFiles(root, DOC_DIRS)];
 
 	for (const style of [IndentStyle.TABS, IndentStyle.SPACES_4]) {
@@ -19,21 +18,21 @@ describeCorpus("NodeWriter: ida y vuelta", root => {
 			for (const file of files) {
 				const name = path.relative(root, file);
 
-				it(`estable en ${name}`, () => {
+				it(`stable in ${name}`, () => {
 					const original = new Parser().parseResult(fs.readFileSync(file, "utf-8"));
-					assert.strictEqual(original.getErrors().length, 0, `${name} no parsea:${describeErrors(original.getErrors())}`);
+					assert.strictEqual(original.getErrors().length, 0, `${name} does not parse:${describeErrors(original.getErrors())}`);
 
 					const written = NodeWriter.toSTXTDocs(original.getNodes(), style);
 
 					const reparsed = new Parser().parseResult(written);
 					assert.strictEqual(
 						reparsed.getErrors().length, 0,
-						`${name}: la salida del writer no vuelve a parsear:${describeErrors(reparsed.getErrors())}`
+						`${name}: the output of the writer does not parse again:${describeErrors(reparsed.getErrors())}`
 					);
 
 					assert.strictEqual(
 						NodeWriter.toSTXTDocs(reparsed.getNodes(), style), written,
-						`${name}: el árbol cambia al reparsear la salida del writer`
+						`${name}: the tree changes when the output of the writer is parsed again`
 					);
 				});
 			}

@@ -3,6 +3,23 @@ import { StringUtils } from "./StringUtils";
 import { ParseException } from "../exceptions/ParseException";
 import { Line } from "./Line";
 
+/**
+ * Splits a source line into its indentation and its content, and classifies it as a comment, a
+ * text line of an open block or a regular line.
+ *
+ * Indentation is one level per tab or per {@link Constants.TAB_SPACES} spaces; mixing both, using
+ * a number of spaces that is not a multiple of four or going more than one level deeper than the
+ * previous node are errors (spec 8.1 and 8.3).
+ *
+ * @param line source line, with its indentation.
+ * @param lastNodeBlock true if the node currently open is a BLOCK text node.
+ * @param lastLevel indentation level of the node currently open.
+ * @param numLine line number, for the error messages.
+ * @param validate false to split the line without enforcing the indentation rules.
+ * @returns the line already split into indentation and content.
+ * @throws ParseException with code `MIXED_INDENTATION`, `INVALID_NUMBER_SPACES` or
+ *         `INDENTATION_LEVEL_NOT_VALID` if the indentation is not valid.
+ */
 export function parseLine(line: string, lastNodeBlock: boolean, lastLevel: number, numLine: number, validate: boolean = true): Line {
 	let level = 0;
 	let spaces = 0;
@@ -27,26 +44,26 @@ export function parseLine(line: string, lastNodeBlock: boolean, lastLevel: numbe
 		} else if (c === Constants.COMMENT_CHAR) {
 			return new Line(level, line.substring(pointer + 1), true, false, pointer);
 		} else {
-			// Primer carácter no espacio/tab/comentario => fin de indentación
+			// First character that is not space/tab/comment => end of indentation
 			break;
 		}
 
-		// Dentro del bloque de texto
+		// Inside the text block
 		if (lastNodeBlock && level > lastLevel) {
 			const text = StringUtils.rightTrim(line.substring(pointer + 1));
-			// El prefijo que cubre el nivel de bloque debe ser homogéneo (spec 10.2, regla 2);
-			// las líneas vacías se preservan siempre y quedan exentas (spec 10.3)
+			// The prefix covering the block level must be homogeneous (spec 10.2, rule 2);
+			// empty lines are always preserved and are exempt from it (spec 10.3)
 			if (validate && sawSpace && sawTab && text.length > 0) {
 				throw new ParseException(numLine, "MIXED_INDENTATION", `Mixed tabs and spaces in indentation`);
 			}
 			return new Line(level, text, false, true, pointer);
 		}
 
-		// Aumentamos pointer
+		// Move the pointer forward
 		pointer++;
 	}
 
-	// En este punto ya estamos fuera de bloque de texto (si existía)
+	// From here on we are outside the text block (if there was one)
 
 	// Empty
 	if (pointer === line.length) {
@@ -56,21 +73,21 @@ export function parseLine(line: string, lastNodeBlock: boolean, lastLevel: numbe
 		return new Line(level, "", false, false, pointer);
 	}
 
-	// Mezcla de espacios y tabuladores en la indentación (spec 8.1 y 8.3)
+	// Tabs and spaces mixed in the indentation (spec 8.1 and 8.3)
 	if (validate && sawSpace && sawTab) {
 		throw new ParseException(numLine, "MIXED_INDENTATION", `Mixed tabs and spaces in indentation`);
 	}
 
-	// Indentación no es múltiplo de 4 con espacios
+	// Indentation with spaces that is not a multiple of 4
 	if (validate && spaces > 0) {
 		throw new ParseException(numLine, "INVALID_NUMBER_SPACES", `There are ${spaces} spaces before node`);
 	}
 
-	// Validamos level
+	// Validate the level
 	if (validate && level > lastLevel + 1) {
 		throw new ParseException(numLine, "INDENTATION_LEVEL_NOT_VALID", `Level of indent incorrect: ${level}`);
 	}
 
-	// Caso general: devolver la línea sin la indentación consumida
+	// General case: return the line without the indentation already consumed
 	return new Line(level, line.substring(pointer).trim(), false, false, pointer);
 }

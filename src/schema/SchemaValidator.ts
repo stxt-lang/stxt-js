@@ -10,19 +10,32 @@ import { ChildDefinition } from "./ChildDefinition";
 import { TypeRegistry } from "./TypeRegistry";
 import { Type } from "./Type";
 
+/** {@link Validator} that, for each node, resolves its {@link Schema} through a {@link SchemaProvider} and validates type and cardinality. */
 export class SchemaValidator implements Validator {
     private readonly schemaProvider: SchemaProvider;
     private readonly recursiveValidation: boolean;
 
+    /**
+     * Creates a validator that resolves schemas through the given provider.
+     *
+     * @param schemaProvider where to resolve the schema of each namespace from.
+     * @param recursive whether the children of each node are validated recursively too.
+     */
     constructor(schemaProvider: SchemaProvider, recursive = false) {
         this.schemaProvider = schemaProvider;
         this.recursiveValidation = recursive;
     }
 
+    /**
+     * Validates a node against the schema of its namespace.
+     *
+     * @param node already closed node to validate.
+     * @returns the validation errors found, or an empty array if the node is valid.
+     */
     validate(node: Node): ValidationException[] {
         const errors: ValidationException[] = [];
 
-        // Obtenemos namespace
+        // Get the namespace
         const namespace = node.getNamespace();
         const schema = this.schemaProvider.getSchema(namespace);
 
@@ -31,10 +44,10 @@ export class SchemaValidator implements Validator {
             return errors;
         }
 
-        // Validamos nodo
+        // Validate the node
         errors.push(...this.validateAgainstSchema(node, schema));
 
-        // Validamos children
+        // Validate the children
         if (this.recursiveValidation) {
             for (const childNode of node.getChildren()){
                 errors.push(...this.validate(childNode));
@@ -44,6 +57,13 @@ export class SchemaValidator implements Validator {
         return errors;
     }
 
+    /**
+     * Validates a node against an already resolved schema: existence, value type and cardinalities of its children.
+     *
+     * @param node node to validate.
+     * @param schema schema to validate against.
+     * @returns the validation errors found, empty if the node is valid.
+     */
     validateAgainstSchema(node: Node, schema: Schema): ValidationException[] {
         const errors: ValidationException[] = [];
         const schemaNode = schema.getNodeDefinition(node.getNormalizedName());
@@ -61,8 +81,8 @@ export class SchemaValidator implements Validator {
         return errors;
     }
 
-    // Modelo de contenido cerrado (STXT-SCHEMA-SPEC, sección 6): solo se permiten
-    // los hijos directos declarados en la definición del padre; sin Children, cierre total
+    // Closed content model (STXT-SCHEMA-SPEC, section 6): only the direct children declared
+    // in the definition of the parent are allowed; with no Children, nothing is
     private static validateChildrenDeclared(nodeDef: NodeDefinition, node: Node): ValidationException[] {
         const errors: ValidationException[] = [];
 
@@ -108,7 +128,7 @@ export class SchemaValidator implements Validator {
         for (const child of node.getChildren()) {
             const childName = child.getQualifiedName();
             count.set(childName, (count.get(childName) ?? 0) + 1);
-            
+
             if (!childrenByType.has(childName)) {
                 childrenByType.set(childName, []);
             }
@@ -118,8 +138,8 @@ export class SchemaValidator implements Validator {
         for (const childDef of nodeDef.getChildren().values()) {
             const qname = childDef.getQualifiedName();
             errors.push(...SchemaValidator.validateCountChild(
-                childDef, 
-                count.get(qname) ?? 0, 
+                childDef,
+                count.get(qname) ?? 0,
                 node,
                 childrenByType.get(qname) ?? []
             ));
@@ -138,10 +158,10 @@ export class SchemaValidator implements Validator {
         }
 
         if (max !== null && childCount > max) {
-            // Error en el parent
+            // Error on the parent
             errors.push(new ValidationException(node.getLine(),"INVALID_NUMBER",`${childCount} nodes of '${childDef.getQualifiedName()}' and max is ${max}`));
-            
-            // Error en cada nodo hijo que excede el máximo permitido
+
+            // Error on each child node beyond the allowed maximum
             for (const child of children) {
                 errors.push(new ValidationException(
                     child.getLine(),

@@ -1,12 +1,22 @@
 import { ValidationException } from "../exceptions/ValidationException";
 import { ChildLine } from "./ChildLine";
 
+/** Parses the inline value of a child node inside an `@stxt.template`, shaped as `(min,max) TYPE [values]`. */
 export class ChildLineParser {
     private constructor() { }
 
     private static readonly CHILD_LINE_PATTERN =
         /^\s*(?:\(\s*([^()\s][^)]*?)\s*\)\s*)?([^()[\]]*)?(?:\[\s*([^]*?)\s*\]\s*)?\s*$/;
 
+    /**
+     * Parses a definition line into its type, its cardinality and its allowed values.
+     *
+     * @param rawLine inline value of the node, `(min,max) TYPE [values]`.
+     * @param lineNumber line number, for the error messages.
+     * @returns the line already split into type, cardinality and values.
+     * @throws ValidationException with code `INVALID_CHILD_LINE`, `INVALID_CHILD_COUNT`,
+     *         `MIN_GREATER_THAN_MAX` or `VALUE_DUPLICATED` if the line is not valid.
+     */
     static parse(rawLine: string, lineNumber: number): ChildLine {
         if (rawLine.trim().length === 0) {
             return new ChildLine(null, null, null, null);
@@ -49,7 +59,7 @@ export class ChildLineParser {
             }
             const aNum = ChildLineParser.parseCount(parts[0].trim(), count, rawLine, lineNumber);
             const bNum = ChildLineParser.parseCount(parts[1].trim(), count, rawLine, lineNumber);
-            // Cardinalidad inválida si min > max (STXT-TEMPLATE-SPEC 7.1)
+            // Invalid cardinality when min > max (STXT-TEMPLATE-SPEC 7.1)
             if (aNum > bNum) {
                 throw new ValidationException(lineNumber, "MIN_GREATER_THAN_MAX", `Min ${aNum} greater than Max ${bNum} in line: ${rawLine}`);
             }
@@ -80,19 +90,18 @@ export class ChildLineParser {
                 list.push(part);
             }
 
-            // Los corchetes presentes (aunque vengan vacíos, "[]") cuentan como una definición
-            // explícita de valores: se devuelve un array no-nulo (posiblemente vacío) para
-            // distinguirlo de la ausencia total de corchetes (valuesStr null/undefined, values
-            // permanece null). Así "[]" se trata como redefinición/definición real (ported
-            // from stxt-java).
+            // Brackets being there (even empty ones, "[]") count as an explicit definition of
+            // values: a non-null array is returned (possibly empty) to tell it apart from having
+            // no brackets at all (valuesStr null/undefined, values stays null). That way "[]" is
+            // treated as a real definition/redefinition (ported from stxt-java).
             values = list;
         }
 
-        // type es string|null en nuestra clase
+        // type is string|null in our class
         return new ChildLine(type ?? null, min, max, values);
     }
 
-    // num, min y max deben ser enteros no negativos, sin texto sobrante (STXT-TEMPLATE-SPEC 7.1)
+    // num, min and max must be non-negative integers, with no trailing text (STXT-TEMPLATE-SPEC 7.1)
     private static parseCount(num: string, count: string, rawLine: string, lineNumber: number): number {
         if (!/^\d+$/.test(num)) {
             throw new ValidationException(lineNumber, "INVALID_CHILD_COUNT", `Invalid count ${count} in line: ${rawLine}`);

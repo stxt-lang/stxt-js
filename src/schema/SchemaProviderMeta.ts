@@ -6,6 +6,10 @@ import { ValidationException } from "../exceptions/ValidationException";
 import { RuntimeException } from "../exceptions/RuntimeException";
 import { transformNodeToSchema } from "./SchemaParser";
 
+/**
+ * {@link SchemaProvider} that defines in code the meta-schema of the schema language itself
+ * (`@stxt.schema`), so that a loaded schema can validate itself.
+ */
 export class SchemaProviderMeta implements SchemaProvider {
     private static readonly META_TEXT = `Schema (@stxt.schema): @stxt.schema
     Node: Schema
@@ -73,6 +77,11 @@ export class SchemaProviderMeta implements SchemaProvider {
 
     private readonly meta: Schema;
 
+    /**
+     * Parses the meta-schema and keeps it ready to be served.
+     *
+     * @throws ValidationException with code `META_SCHEMA_INVALID` if the meta-schema does not produce exactly one document.
+     */
     constructor() {
         const parser = new Parser();
         const nodes: Node[] = parser.parse(SchemaProviderMeta.META_TEXT);
@@ -84,6 +93,13 @@ export class SchemaProviderMeta implements SchemaProvider {
         this.meta = transformNodeToSchema(nodes[0]);
     }
 
+    /**
+     * Serves the meta-schema of the schema language.
+     *
+     * @param namespace namespace whose schema is wanted; only `@stxt.schema` is served.
+     * @returns the meta-schema of the schema language.
+     * @throws RuntimeException with code `RESOURCE_NOT_FOUND` if any other namespace is asked for.
+     */
     getSchema(namespace: string): Schema {
         if (namespace !== Schema.SCHEMA_NAMESPACE) {
             throw new RuntimeException("RESOURCE_NOT_FOUND", `Not found '${namespace}' in namespace: ${Schema.SCHEMA_NAMESPACE}`);

@@ -3,13 +3,14 @@ import { ValidationException } from "../../exceptions/ValidationException";
 import { NodeDefinition } from "../NodeDefinition";
 import { Type } from "../Type";
 
+/** `ENUM` type: checks that the value is one of those declared in {@link NodeDefinition.getValues}. */
 export const ENUM: Type = {
     getName(): string {
         return "ENUM";
     },
 
     validate(nodeDef: NodeDefinition, node: Node): void {
-        // Forma del valor INLINE (STXT-SCHEMA-SPEC 9.3): no admite bloque '>>'
+        // INLINE value form (STXT-SCHEMA-SPEC 9.3): the block '>>' form is not allowed
         if (node.isTextNode()) {
             throw new ValidationException(node.getLine(),"NOT_ALLOWED_TEXT",`Not allowed text in node ${node.getQualifiedName()}`);
         }

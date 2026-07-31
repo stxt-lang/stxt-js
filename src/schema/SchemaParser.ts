@@ -7,38 +7,45 @@ import { RuntimeException } from "../exceptions/RuntimeException";
 import { NameNamespaceParser } from "../core/NameNamespaceParser";
 import { TypeRegistry } from "./TypeRegistry";
 
+/**
+ * Turns the tree of an already parsed `@stxt.schema` document into a {@link Schema}.
+ *
+ * @param node root node of the schema document, `Schema (@stxt.schema): ...`.
+ * @returns the schema the document defines.
+ * @throws ValidationException if the document is not a valid `@stxt.schema` one.
+ */
 export function transformNodeToSchema(node: Node): Schema {
     // Node name
     const nodeName = node.getNormalizedName();
     const namespaceSchema = node.getNamespace();
 
-    // Obtenemos name y namespace
+    // Get the name and the namespace
     if (nodeName !== "schema" || namespaceSchema !== Schema.SCHEMA_NAMESPACE) {
-        throw new ValidationException(node.getLine(), "NOT_STXT_SCHEMA", `Se espera schema(${Schema.SCHEMA_NAMESPACE}) y es ${nodeName}(${namespaceSchema})`);
+        throw new ValidationException(node.getLine(), "NOT_STXT_SCHEMA", `Expected schema(${Schema.SCHEMA_NAMESPACE}) but got ${nodeName}(${namespaceSchema})`);
     }
 
-    // Obtenemos description
+    // Get the description
     const descrip = node.getChild("description")?.getText();
 
     const schema = new Schema(node.getValue(), node.getLine(), descrip);
 
-    // Para validar
-    const allNames = new Set<string>(); // Para validar que existan los childs
+    // Used to check that every child is defined
+    const allNames = new Set<string>();
 
-    // Obtenemos los nodos
+    // Get the nodes
     for (const n of node.getChildrenByName("node")) {
         const schNode = createFrom(n, schema.getNamespace());
         schema.addNodeDefinition(schNode);
         allNames.add(schNode.getNormalizedName());
     }
 
-    // Validamos que todos los nombres estén definidos
+    // Check that every name is defined
     for (const schNode of schema.getNodes().values()) {
         for (const schChild of schNode.getChildren().values()) {
-            // Sólo validamos del mismo namespace
+            // Only names of the same namespace are checked
             if (schChild.getNamespace() === schema.getNamespace()) {
-                // Ojo: en Java aquí se usa schChild.getNormalizedName(), pero ChildDefinition no lo expone.
-                // Para mantener el comportamiento, se recomienda añadir getNormalizedName() a ChildDefinition.
+                // Defensive leftover from the Java port: ChildDefinition does expose
+                // getNormalizedName(), so this check can never fail with the current class.
                 const childNorm = (schChild as any).getNormalizedName?.() as string | undefined;
 
                 if (!childNorm) {
@@ -58,6 +65,7 @@ export function transformNodeToSchema(node: Node): Schema {
     return schema;
 }
 
+/** Builds the definition of a node from a `Node:` entry of the schema document. */
 function createFrom(n: Node, namespace: string): NodeDefinition {
     const name = n.getValue();
 
@@ -72,7 +80,7 @@ function createFrom(n: Node, namespace: string): NodeDefinition {
 
     const children = n.getChild("children");
     if (children) {
-        // Error de schema 13.5: Children en un Node cuyo tipo no admite hijos
+        // Schema error 13.5: Children in a Node whose type does not admit children
         if (!TypeRegistry.admitsChildren(type)) {
             throw new ValidationException(children.getLine(), "CHILDREN_NOT_ALLOWED_FOR_TYPE", `Type ${type} does not allow children (node ${name})`);
         }
@@ -81,7 +89,7 @@ function createFrom(n: Node, namespace: string): NodeDefinition {
         }
     }
 
-    // Miramos values
+    // Look at the values
     let valuesNodes = n.getChildrenByName("values");
     if (valuesNodes && valuesNodes.length > 0) {
         if (type !== "ENUM") {
@@ -98,11 +106,11 @@ function createFrom(n: Node, namespace: string): NodeDefinition {
             result.addValue(v.getValue(), v.getLine());
         }
 
-        // Para la comprobación final de ENUM
+        // For the final ENUM check
         valuesNodes = values;
     }
 
-    // Miramos enum
+    // Look at the enum
     if (type === "ENUM" && (!valuesNodes || valuesNodes.length === 0)) {
         throw new ValidationException(n.getLine(), "VALUES_EMPTY_FOR_ENUM", "ENUM Type must include values");
     }
@@ -110,8 +118,9 @@ function createFrom(n: Node, namespace: string): NodeDefinition {
     return result;
 }
 
+/** Adds to a node definition the expected child a `Child:` entry declares. */
 function putChildToSchemaNode(schemaNode: NodeDefinition, child: Node, defNamespace: string): void {
-    // Obtenemos name y namespace
+    // Get the name and the namespace
     const ns = NameNamespaceParser.parse(child.getValue(), defNamespace, child.getLine(), child.getValue());
     const name = ns.getName();
     const namespace = ns.getNamespace();
@@ -119,7 +128,7 @@ function putChildToSchemaNode(schemaNode: NodeDefinition, child: Node, defNamesp
     const min = getInteger(child, "min");
     const max = getInteger(child, "max");
 
-    // Cardinalidad inválida si Min > Max (STXT-SCHEMA-SPEC 10 y 13.7)
+    // Invalid cardinality when Min > Max (STXT-SCHEMA-SPEC 10 and 13.7)
     if (min !== null && max !== null && min > max) {
         throw new ValidationException(child.getLine(), "MIN_GREATER_THAN_MAX", `Min ${min} greater than Max ${max}`);
     }
@@ -128,6 +137,7 @@ function putChildToSchemaNode(schemaNode: NodeDefinition, child: Node, defNamesp
     schemaNode.addChildDefinition(schemaChild);
 }
 
+/** Reads an integer child (`Min`, `Max`) of a node, or null when it is not there. */
 function getInteger(node: Node, name: string): number | null {
     const n = node.getChild(name);
     if (!n) {

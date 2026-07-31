@@ -1,19 +1,37 @@
 import { Node } from "../core/Node";
 
+/** Indentation style to use when writing. */
 export enum IndentStyle {
+	/** One tab character per level. */
 	TABS = "TABS",
+	/** Four spaces per level. */
 	SPACES_4 = "SPACES_4",
 }
 
+/** Serializes a {@link Node} (or a list of root nodes) back to STXT text. */
 export class NodeWriter {
 	private constructor() { }
 
+	/**
+	 * Serializes a node to STXT text.
+	 *
+	 * @param node node to serialize (along with its children).
+	 * @param style indentation style to use; tabs by default.
+	 * @returns the node serialized to STXT text.
+	 */
 	static toSTXT(node: Node, style: IndentStyle = IndentStyle.TABS): string {
 		const out: string[] = [];
 		NodeWriter.writeNode(out, node, 0, style, "");
 		return out.join("");
 	}
 
+	/**
+	 * Serializes a list of root nodes to STXT text, separated by a blank line.
+	 *
+	 * @param docs root nodes to serialize.
+	 * @param style indentation style to use; tabs by default.
+	 * @returns the documents serialized to STXT text.
+	 */
 	static toSTXTDocs(docs: ReadonlyArray<Node>, style: IndentStyle = IndentStyle.TABS): string {
 		const out: string[] = [];
 		for (let i = 0; i < docs.length; i++) {

@@ -21,16 +21,17 @@ import { GROUP } from "./type/GROUP";
 import { ENUM } from "./type/ENUM";
 import { MARKDOWN } from "./type/MARKDOWN";
 
+/** Static registry of the STXT value types, indexed by name. Adding a new type: a new {@link Type} + `register(...)` here. */
 export class TypeRegistry {
     private static readonly REGISTRY: Map<string, Type> = new Map();
 
-    // Inicialización estática (sin INSTANCE)
+    // Static initialization (no INSTANCE)
     private static readonly _init = (() => {
-        // Tipos principales
+        // Main types
         TypeRegistry.register(INLINE);
         TypeRegistry.register(BLOCK);
 
-        // Subtipos
+        // Subtypes
         TypeRegistry.register(TEXT);
         TypeRegistry.register(BOOLEAN);
         TypeRegistry.register(URL);
@@ -52,13 +53,25 @@ export class TypeRegistry {
         return true;
     })();
 
-    // STXT-SCHEMA-SPEC 9 / STXT-TEMPLATE-SPEC 15: sólo INLINE y GROUP admiten hijos
+    // STXT-SCHEMA-SPEC 9 / STXT-TEMPLATE-SPEC 15: only INLINE and GROUP admit children
+    /**
+     * Tells whether nodes of a type may have children.
+     *
+     * @param nodeType name of the type.
+     * @returns true if nodes of this type may have children (only INLINE and GROUP).
+     */
     static admitsChildren(nodeType: string): boolean {
         return nodeType === "INLINE" || nodeType === "GROUP";
     }
 
+    /**
+     * Looks up a registered type by name.
+     *
+     * @param nodeType name of the type to look for.
+     * @returns the {@link Type} registered under that name, or undefined if it does not exist.
+     */
     static get(nodeType: string): Type | undefined {
-        // fuerza que se ejecute _init al cargar la clase (por si el bundler hiciera cosas raras)
+        // force _init to run when the class is loaded (in case a bundler does something odd)
         void this._init;
         return this.REGISTRY.get(nodeType);
     }

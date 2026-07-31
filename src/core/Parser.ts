@@ -7,18 +7,42 @@ import { Validator } from "../processors/Validator";
 import { ParseResult } from "./ParseResult";
 import { ParseException } from "../exceptions/ParseException";
 
+/**
+ * Line-by-line STXT parsing engine. It knows nothing about schemas: semantic validation is
+ * plugged in through {@link Parser.registerValidator} and {@link Parser.registerObserver}.
+ * See {@link UnifiedSchemaProvider} for the usual way of building the validators to register.
+ */
 export class Parser {
 	private observers: Observer[] = [];
 	private validators: Validator[] = [];
 
+	/**
+	 * Registers an observer, notified when each node is opened and closed.
+	 *
+	 * @param observer the {@link Observer} to register, notified while parsing.
+	 */
 	public registerObserver(observer: Observer): void {
 		this.observers.push(observer);
 	}
 
+	/**
+	 * Registers a validator, invoked when each node is closed.
+	 *
+	 * @param validator the {@link Validator} to register, invoked when each node is closed during parsing.
+	 */
 	public registerValidator(validator: Validator): void {
 		this.validators.push(validator);
 	}
 
+	/**
+	 * Traditional fail-fast mode: throws the first error found (either syntax or validation).
+	 * Internally it reuses the same traversal as {@link Parser.parseResult}, and throws the first
+	 * error it collected.
+	 *
+	 * @param content the whole STXT document to parse.
+	 * @returns the root nodes of the document.
+	 * @throws ParseException the first error found, be it syntax or validation.
+	 */
 	parse(content: string): Node[] {
 		const result = this.parseResult(content);
 		if (result.hasErrors()) {
@@ -28,6 +52,13 @@ export class Parser {
 		return result.getNodes();
 	}
 
+	/**
+	 * Multi-error mode: parses the whole content collecting every error found (both syntax and
+	 * validation) without bailing out on the first one. See {@link ParseResult}.
+	 *
+	 * @param content the whole STXT document to parse.
+	 * @returns the collected result, with the root nodes obtained and every error found.
+	 */
 	parseResult(content: string): ParseResult {
 		content = this.removeUTF8BOM(content);
 
@@ -39,8 +70,8 @@ export class Parser {
 
 		const lines = content.split(/\r?\n/);
 
-		// El salto de línea final es terminador de la última línea, no una línea
-		// vacía adicional (evita añadir una línea espuria a un bloque >> en EOF, spec 10.3)
+		// The final line break terminates the last line, it is not an extra empty line
+		// (this avoids adding a spurious line to a >> block at EOF, spec 10.3)
 		if (lines.length > 0 && lines[lines.length - 1] === "") {
 			lines.pop();
 		}
@@ -50,15 +81,15 @@ export class Parser {
 			this.processLine(line, lineNumber, stack, documents, result);
 		}
 
-		// Cerrar todos los nodos pendientes al EOF
+		// Close every node still open at EOF
 		this.closeToLevel(stack, documents, 0, result);
 
-		// Agregar nodos al resultado
+		// Add the nodes to the result
 		for (const doc of documents) {
 			result.addNode(doc);
 		}
 
-		// Retorno resultado
+		// Return the result
 		return result;
 	}
 
@@ -68,11 +99,11 @@ export class Parser {
 			const lastLevel = lastNode ? lastNode.getLevel() : 0;
 			const lastNodeText = lastNode ? lastNode.isTextNode() : false;
 
-			// Parseamos línea
+			// Parse the line
 			const line: Line = parseLine(lineString, lastNodeText, lastLevel, lineNumber);
 
 			if (line.isComment) {
-				// Pasamos a observers
+				// Hand it over to the observers
 				this.observers.forEach(observer => {
 					observer.onComment(lineNumber, lineString);
 				});
@@ -81,37 +112,37 @@ export class Parser {
 
 			const currentLevel = line.level;
 
-			// Si estamos dentro de un nodo texto, y el nivel indica que sigue siendo texto,
-			// añadimos línea de texto y no creamos nodo.
+			// When we are inside a text node and the level says it is still text,
+			// append the text line instead of creating a node.
 			if (line.isBlock) {
 				lastNode!.addTextLine(line.content);
-				
-				// Notificar a observers sobre la línea de texto
+
+				// Notify the observers about the text line
 				this.observers.forEach(observer => {
 					observer.onTextLine(lastNode!, lineNumber, lineString, line);
 				});
-				
+
 				return;
 			}
 
-			// Si es línea vacía no hacemos nada
+			// Empty lines are ignored
 			if (line.isEmpty()) {
 				return;
 			}
 
-			// Cerramos nodos hasta el nivel actual (esto "finaliza" y adjunta al padre/documentos)
+			// Close the nodes down to the current level (this "finishes" them and attaches them to the parent/documents)
 			this.closeToLevel(stack, documents, currentLevel, result);
 
-			// Creamos el nuevo nodo y lo dejamos "abierto" en la pila (NO lo adjuntamos aún)
+			// Create the new node and leave it "open" on the stack (do NOT attach it yet)
 			const parent: Node | null = stack.length === 0 ? null : stack[stack.length - 1];
 			const node = createNode(line, lineNumber, currentLevel, parent);
 
-			// Pasamos a observers
+			// Hand it over to the observers
 			this.observers.forEach(observer => {
 				observer.onCreate(node, lineString);
 			});
 
-			// Añadimos a stack
+			// Push it onto the stack
 			stack.push(node);
 		} catch (e: unknown) {
 			this.handleError(e, lineNumber, result);
@@ -122,10 +153,10 @@ export class Parser {
 		if (e instanceof ParseException) {
 			result.addError(e);
 		} else if (e instanceof Error) {
-			// Convertir errores genéricos a ParseException
+			// Turn generic errors into a ParseException
 			result.addError(new ParseException(line, errorCode, e.message));
 		} else {
-			// Error desconocido
+			// Unknown error
 			result.addError(new ParseException(line, unknownErrorCode, String(e)));
 		}
 	}
@@ -134,7 +165,7 @@ export class Parser {
 		while (stack.length > targetLevel) {
 			const completed = stack.pop()!;
 
-			// Pasamos validators
+			// Hand it over to the validators
 			this.validators.forEach(validator => {
 				try {
 					const errors = validator.validate(completed);
@@ -152,7 +183,7 @@ export class Parser {
 				stack[stack.length - 1].addChild(completed);
 			}
 
-			// Pasamos a observers
+			// Hand it over to the observers
 			this.observers.forEach(observer => {
 				observer.onFinish(completed);
 			});

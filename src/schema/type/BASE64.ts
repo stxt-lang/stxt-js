@@ -5,6 +5,7 @@ import { NodeDefinition } from "../NodeDefinition";
 import { Type } from "../Type";
 import { binaryValue } from "./binaryValue";
 
+/** `BASE64` type: checks that the content is valid Base64. */
 export const BASE64: Type = {
     getName(): string {
         return "BASE64";
@@ -14,14 +15,14 @@ export const BASE64: Type = {
         const raw = binaryValue(n);
 
         try {
-            // Intentamos decodificar
+            // Try to decode it
             const buf = Buffer.from(raw, "base64");
 
-            // Re-encode para verificar consistencia
-            // (evita aceptar cadenas parcialmente válidas)
+            // Re-encode to check consistency
+            // (this keeps partially valid strings out)
             const reencoded = buf.toString("base64");
 
-            // Normalizamos padding para comparar
+            // Normalize the padding before comparing
             const normalizedInput = raw.replace(/=+$/, "");
             const normalizedReencoded = reencoded.replace(/=+$/, "");
 

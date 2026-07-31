@@ -18,20 +18,23 @@ The normative language spec is **not** in this repo: it lives in the sibling rep
 
 Consult those files before changing parser or schema semantics; behaviour changes here should follow the spec, not redefine it.
 
-## Next up (as of 2026-07-28)
+## Next up (as of 2026-07-31)
 
-**Nothing is broken and nothing is pending here.** `@stxt-lang/core@0.5.2` was published on 2026-07-28 and verified from the registry (115 files, README + LICENSE in, no `.js.map`, `ValidationException` exported). `npm test` is 224 passing. `../stxt-vscode/stxt` 0.5.2 consumes it, compiles, lints and packages a 79-file `.vsix`.
+**0.5.3 is written but not released.** `package.json` says `0.5.3` and the working tree holds the documentation release that realigns this repo with `dev.stxt:stxt-core` 0.5.3 (published from `../stxt-java` on 2026-07-31): every source comment translated to English and a JSDoc comment on every exported member, which `tsc` copies into `out/**/*.d.ts` — the TypeScript counterpart of the javadoc Java publishes. `npm test` is 224 passing. Still to do: commit, tag, `npm publish`, and bump the range in `stxt-vscode/stxt/package.json` (the 0.5.3 CHANGELOG entry is already written there).
 
-That release closed the whole "polish the package's public face" list — README, LICENSE, npm metadata, tags, source maps, lock file — plus the `ValidationException` export.
+The only user-visible change is the `NOT_STXT_SCHEMA` message, now `Expected schema(...) but got ...` like Java's; the code is unchanged and the exports of `all.ts` are untouched.
 
-Both tags are in place and pushed: `v0.5.2` at `604477c` and `v0.5.1` retroactively at `a25e88e` (the `gitHead` the publish recorded). **Tagging is now part of the release routine**, and the tags here are annotated (`git tag -a -m "..."` — pass `-m` or git opens an editor).
+0.5.2 (2026-07-28) closed the "polish the package's public face" list — README, LICENSE, npm metadata, tags, source maps, lock file — plus the `ValidationException` export. Both tags are in place and pushed: `v0.5.2` at `604477c` and `v0.5.1` retroactively at `a25e88e` (the `gitHead` the publish recorded). **Tagging is now part of the release routine**, and the tags here are annotated (`git tag -a -m "..."` — pass `-m` or git opens an editor).
 
 Ideas for whenever there is a next release, none urgent:
 
 - The npm README is the only doc that shows the API in use; keep its examples honest (they were all executed against `out/all.js` before shipping — the first draft had invented schema syntax and wrong `Observer`/`NodeWriter` signatures).
 - `TypeRegistry`, `RuntimeException` and `SchemaProviderMemory` are still unexported. Export them only if a consumer actually needs them.
+- `SchemaParser.transformNodeToSchema` still carries a defensive `(schChild as any).getNormalizedName?.()` with a `CHILD_DEFINITION_API_MISMATCH` branch, left over from the Java port: `ChildDefinition` does expose the method, so the branch is dead. Removing it is a behaviour-preserving cleanup, kept out of 0.5.3 because that release was documentation only.
 
 ## The npm package: `@stxt-lang/core`
+
+The step-by-step release procedure lives in [RELEASING.md](RELEASING.md) (mirroring `../stxt-java/RELEASING.md`); this section is the *why* behind it.
 
 This repo is published to npm as **`@stxt-lang/core`** — first release **0.5.1 on 2026-07-28**, **0.5.2 the same day**. The name was chosen over `@stxt-lang/parser` / `@stxt-lang/js` because "core" leaves room for future sibling JS packages (a CLI, a language server) without competing for the "main" name. The GitHub org `stxt-lang` and the npm scope `@stxt-lang` are both reserved by the user (the org also hosts `stxt-vscode`, `stxt-java`, `stxt-web`, `stxt-python`, `stxt-cms`, `stxt-impl`).
 
@@ -111,4 +114,4 @@ Schemas themselves are written in STXT. Two reserved namespaces drive this:
 ## Conventions
 
 - Errors are thrown as typed exceptions carrying an error **code** string: `ParseException`, `ValidationException`, `RuntimeException` (in [src/exceptions/](src/exceptions/)). Prefer these over raw `Error` and pass a stable code.
-- Source comments and many messages are in Spanish; match the surrounding language when editing a file.
+- **Source comments, JSDoc and messages are in English** across the whole repo since 0.5.3 (they used to be in Spanish); keep new code that way. Every exported member carries a JSDoc comment with a summary sentence plus `@param`/`@returns`/`@throws` — `tsc` copies it into `out/**/*.d.ts`, which is what consumers see on hover, so a new export without JSDoc is an undocumented API. The wording is kept deliberately close to the javadoc of `../stxt-java`, so that the same class reads the same in both implementations.

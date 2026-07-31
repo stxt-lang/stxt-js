@@ -8,27 +8,29 @@ import { UnifiedSchemaProvider } from "../runtime/UnifiedSchemaProvider";
 import { ParseException } from "../exceptions/ParseException";
 
 /**
- * Utilidades para los tests de regresión contra el corpus real de `../../stxt-web`.
+ * Helpers for the regression tests against the real corpus in `../../stxt-web`.
  *
- * No se copia el corpus a este repositorio a propósito: stxt-web es la fuente
- * normativa del lenguaje y los tests deben fallar cuando la implementación se
- * separa de los documentos reales, no de una copia congelada.
+ * The corpus is deliberately not copied into this repository: stxt-web is the
+ * normative source of the language and the tests must fail when the implementation
+ * drifts away from the real documents, not from a frozen copy.
  */
 
-// Carpetas de stxt-web con schemas y templates (se cargan en el provider).
+// Folders of stxt-web holding schemas and templates (they are loaded into the provider).
 export const SCHEMA_DIRS = [".stxt"];
 
-// Carpetas de stxt-web con documentos que deben validar contra esos schemas.
+// Folders of stxt-web holding documents that must validate against those schemas.
 export const DOC_DIRS = ["docs", "es", "en"];
 
 /**
- * Localiza `stxt-web`. Se puede forzar con la variable de entorno STXT_WEB;
- * por defecto se busca como proyecto hermano (../../stxt-web desde este repo).
+ * Locates `stxt-web`. It can be forced with the STXT_WEB environment variable;
+ * by default it is looked up as a sibling project (../../stxt-web from this repo).
+ *
+ * @returns the root of stxt-web, or undefined if it is not available.
  */
 export function findStxtWeb(): string | undefined {
 	const candidates = [
 		process.env.STXT_WEB,
-		// __dirname es <repo>/out/test
+		// __dirname is <repo>/out/test
 		path.resolve(__dirname, "..", "..", "..", "stxt-web"),
 	];
 
@@ -41,7 +43,7 @@ export function findStxtWeb(): string | undefined {
 	return undefined;
 }
 
-// Todos los .stxt bajo un directorio, recursivo y en orden estable.
+// Every .stxt file under a directory, recursively and in a stable order.
 export function findStxtFiles(dir: string): string[] {
 	if (!fs.existsSync(dir)) {
 		return [];
@@ -62,14 +64,18 @@ export function findStxtFiles(dir: string): string[] {
 	return result.sort();
 }
 
-// Los .stxt de las carpetas indicadas, relativas a la raíz de stxt-web.
+// The .stxt files of the given folders, relative to the root of stxt-web.
 export function corpusFiles(root: string, dirs: readonly string[]): string[] {
 	return dirs.flatMap(dir => findStxtFiles(path.join(root, dir)));
 }
 
 /**
- * Carga en un provider todos los schemas/templates de las carpetas indicadas,
- * igual que hace `SchemaLoader` con `<workspace>/.stxt/**`.
+ * Loads into a provider every schema/template of the given folders, just like
+ * `SchemaLoader` does with `<workspace>/.stxt/**`.
+ *
+ * @param root root of stxt-web.
+ * @param dirs folders to load the schemas and templates from.
+ * @returns the provider with everything already registered.
  */
 export function loadProvider(root: string, dirs: readonly string[] = SCHEMA_DIRS): UnifiedSchemaProvider {
 	const provider = new UnifiedSchemaProvider();
@@ -82,7 +88,11 @@ export function loadProvider(root: string, dirs: readonly string[] = SCHEMA_DIRS
 }
 
 /**
- * Parsea un documento validándolo contra el provider, igual que `analysisDoc`.
+ * Parses a document validating it against the provider, just like `analysisDoc`.
+ *
+ * @param text document to parse.
+ * @param provider provider the schema of each namespace is resolved from.
+ * @returns the result of parsing, with every error found.
  */
 export function parseWithSchemas(text: string, provider: UnifiedSchemaProvider): ParseResult {
 	const parser = new Parser();
@@ -91,21 +101,24 @@ export function parseWithSchemas(text: string, provider: UnifiedSchemaProvider):
 	return parser.parseResult(text);
 }
 
-// Mensaje legible para el assert: `[CODE] línea 12: mensaje`.
+// Readable message for the assert: `[CODE] line 12: message`.
 export function describeErrors(errors: readonly ParseException[]): string {
-	return errors.map(e => `\n\t[${e.code}] línea ${e.line}: ${e.message}`).join("");
+	return errors.map(e => `\n\t[${e.code}] line ${e.line}: ${e.message}`).join("");
 }
 
 /**
- * `describe` que se salta el bloque entero (marcándolo como pendiente) cuando
- * stxt-web no está disponible, para que el test no falle en un clon aislado.
+ * `describe` that skips the whole block (marking it as pending) when stxt-web is
+ * not available, so that the test does not fail in an isolated clone.
+ *
+ * @param title title of the block.
+ * @param body body of the block, which gets the root of stxt-web.
  */
 export function describeCorpus(title: string, body: (root: string) => void): void {
 	const root = findStxtWeb();
 
 	if (root === undefined) {
 		describe(title, () => {
-			it("requiere el proyecto hermano stxt-web (usa STXT_WEB=/ruta para indicarlo)");
+			it("requires the sibling project stxt-web (use STXT_WEB=/path to point at it)");
 		});
 		return;
 	}
