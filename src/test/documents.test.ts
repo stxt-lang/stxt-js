@@ -48,13 +48,19 @@ describeCorpus("Documents of stxt-web", root => {
 });
 
 /**
- * One same namespace is described twice in stxt-web: as a schema (`.stxt/schemas/`)
- * and as a template (`.stxt/templates/`). Since the template is compiled into a
- * Schema, both must validate the documents exactly the same way.
+ * One same namespace is described twice in stxt-web: as a schema and as a template.
+ * Since the template is compiled into a Schema, both must validate the documents
+ * exactly the same way.
+ *
+ * STXT-DISCOVERY-SPEC made same-level duplicates an error, so the second copy of each
+ * pair no longer lives under `.stxt/` (the resolution directory) but in
+ * `examples/definitions/`: the schema side keeps `.stxt/schemas/` plus the moved
+ * tutorial schema, and the template side combines the moved templates with the
+ * tutorial template that stayed in `.stxt/tutorial/`.
  */
 describeCorpus("Schema ↔ template equivalence", root => {
-	const fromSchemas = loadProvider(root, [path.join(".stxt", "schemas")]);
-	const fromTemplates = loadProvider(root, [path.join(".stxt", "templates")]);
+	const fromSchemas = loadProvider(root, [path.join(".stxt", "schemas"), path.join("examples", "definitions", "tutorial")]);
+	const fromTemplates = loadProvider(root, [path.join("examples", "definitions", "templates"), path.join(".stxt", "tutorial")]);
 	const files = corpusFiles(root, DOC_DIRS);
 
 	for (const file of files) {

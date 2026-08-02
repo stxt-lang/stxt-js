@@ -27,3 +27,9 @@ export { ConditionalValidator } from "./runtime/ConditionalValidator";
 export { NodeWriter, IndentStyle } from "./runtime/NodeWriter";
 
 export { transformTemplateNodeToSchema } from "./template/TemplateParser";
+
+export { DiscoveryResolver, DiscoveryOptions } from "./discovery/DiscoveryResolver";
+export { DiscoveryResult, DiscoveryDefinition, DiscoveryLevel } from "./discovery/DiscoveryResult";
+export { DiscoveryError } from "./discovery/DiscoveryError";
+export { DiscoveryFileSystem, DiscoveryEntry } from "./discovery/DiscoveryFileSystem";
+export { DiscoveryEnvironment } from "./discovery/DiscoveryEnvironment";

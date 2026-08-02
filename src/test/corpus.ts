@@ -16,7 +16,7 @@ import { ParseException } from "../exceptions/ParseException";
  */
 
 // Folders of stxt-web holding schemas and templates (they are loaded into the provider).
-export const SCHEMA_DIRS = [".stxt"];
+export const SCHEMA_DIRS = [".stxt", "examples/definitions"];
 
 // Folders of stxt-web holding documents that must validate against those schemas.
 export const DOC_DIRS = ["docs", "es", "en"];

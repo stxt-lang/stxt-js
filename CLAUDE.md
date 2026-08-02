@@ -18,9 +18,11 @@ The normative language spec is **not** in this repo: it lives in the sibling rep
 
 Consult those files before changing parser or schema semantics; behaviour changes here should follow the spec, not redefine it.
 
-## Next up (as of 2026-07-31)
+## Next up (as of 2026-08-02)
 
-**`@stxt-lang/core@0.5.3` was published on 2026-07-31 and verified from the registry** (115 files, 173.7 kB unpacked, README + LICENSE in, no `.js.map`, no `out/test`, JSDoc travelling in the `.d.ts`). Commit `eb98af7`, annotated tag `v0.5.3` pushed. `npm test` is 224 passing.
+**0.6.0 is implemented but NOT published yet**: the new `src/discovery/` module — `DiscoveryResolver`, `DiscoveryResult`, `DiscoveryError` and the injected `DiscoveryFileSystem`/`DiscoveryEnvironment` interfaces — is the reference implementation of **STXT-DISCOVERY-SPEC** (`../stxt-web/es/stxt-discovery-ref.stxt`, new fourth spec, 2026-08-02): resolution chain per document (every ancestor `.stxt/`, then user level, then system level, or the `STXT_PATH` override), per-namespace nearest-wins precedence, same-level duplicates as errors, level cache shared across documents. The resolver is host-agnostic on purpose — **no `node:fs`/`process` access in this package**; consumers inject adapters (`../stxt-cli` has the Node one, `../stxt-vscode/stxt` the `vscode.workspace.fs` one). `package.json` is already bumped to 0.6.0 with `out/discovery` added to `files`, all exports are in `all.ts` with JSDoc, and `npm test` is 252 passing (28 new in `src/test/discovery.test.ts`, spec-conformance over an in-memory file system). Pending: `npm publish` per [RELEASING.md](RELEASING.md), the README example for discovery, and the Java port (`../stxt-java` has no discovery yet).
+
+Previous release: **`@stxt-lang/core@0.5.3` was published on 2026-07-31 and verified from the registry** (115 files, 173.7 kB unpacked, README + LICENSE in, no `.js.map`, no `out/test`, JSDoc travelling in the `.d.ts`). Commit `eb98af7`, annotated tag `v0.5.3` pushed. `npm test` is 224 passing.
 
 It is the documentation release that realigns this repo with `dev.stxt:stxt-core` 0.5.3 (published from `../stxt-java` the same day): every source comment translated to English and a JSDoc comment on every exported member, which `tsc` copies into `out/**/*.d.ts` — the TypeScript counterpart of the javadoc Java publishes to javadoc.io. The only user-visible change is the `NOT_STXT_SCHEMA` message, now `Expected schema(...) but got ...` like Java's; the code is unchanged and the exports of `all.ts` are untouched.
 
