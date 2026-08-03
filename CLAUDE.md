@@ -29,6 +29,16 @@ Both consumers were reinstalled against it the same day and their lock files now
 
 **Still pending**: the Java port — `../stxt-java` has no discovery yet.
 
+**Unreleased fix (2026-08-03, commit `5847d99`)**: `SchemaProviderMemory.addSchema` and
+`TemplateSchemaProviderMemory.addTemplate` used to call `schemaValidator.validate(node)` and
+**discard** the returned `ValidationException[]` — a leftover of the `Validator` contract change
+from throwing to collecting — so invalid definitions (e.g. a schema with `Type: FOO`) were
+silently registered. Both now throw the first error, the same policy as
+`UnifiedSchemaProvider.throwIfInvalid` and `DiscoveryResolver.compile`, and `addSchema` validates
+*before* transforming. Regression tests in `src/test/providers.test.ts` (4 tests; the suite is now
+**256 passing**). Found while building the `../stxt-impl` pseudocode blueprint. The registry
+0.6.0 does **not** include this fix — ship it with the next release.
+
 Previous release: **`@stxt-lang/core@0.5.3` was published on 2026-07-31 and verified from the registry** (115 files, 173.7 kB unpacked, README + LICENSE in, no `.js.map`, no `out/test`, JSDoc travelling in the `.d.ts`). Commit `eb98af7`, annotated tag `v0.5.3` pushed. `npm test` is 224 passing.
 
 It is the documentation release that realigns this repo with `dev.stxt:stxt-core` 0.5.3 (published from `../stxt-java` the same day): every source comment translated to English and a JSDoc comment on every exported member, which `tsc` copies into `out/**/*.d.ts` — the TypeScript counterpart of the javadoc Java publishes to javadoc.io. The only user-visible change is the `NOT_STXT_SCHEMA` message, now `Expected schema(...) but got ...` like Java's; the code is unchanged and the exports of `all.ts` are untouched.
@@ -70,7 +80,7 @@ There is now a **second consumer**: `../stxt-cli` (version 0.1.0), which depends
 
 Consequences to keep in mind:
 
-- This repo's `npm test` (252 tests against the `../stxt-web` corpus) is the only regression suite for **the language**. The extension does have its own `npm test` again (410 tests), but by design it checks *editor-layer* invariants over that same corpus — that it colours within the line, formats without changing what the document says, and does not crash at any cursor position — explicitly leaving language conformance to this repo. So a parser/schema change is still only covered here; what the extension's suite catches is the editor regressing on documents already known to be valid.
+- This repo's `npm test` (256 tests against the `../stxt-web` corpus) is the only regression suite for **the language**. The extension does have its own `npm test` again (410 tests), but by design it checks *editor-layer* invariants over that same corpus — that it colours within the line, formats without changing what the document says, and does not crash at any cursor position — explicitly leaving language conformance to this repo. So a parser/schema change is still only covered here; what the extension's suite catches is the editor regressing on documents already known to be valid.
 - A parser/schema fix therefore means: change it here → `npm test` → `npm publish` → bump the range in `stxt-vscode/stxt/package.json` **and `stxt-cli/package.json`** → `npm install` in each so the lock files record the new registry version.
 - Watch out for `file:`/`npm link` leftovers: after the rename, the extension's committed `package-lock.json` still had `"resolved": "../../stxt-js", "link": true`, which made a clean `npm install` there fail (it tried to build this repo instead of downloading the tarball). Fixed on 2026-07-28, but it's the failure mode to check first if the extension won't install.
 - `stxt-vscode/stxt/CHANGELOG.md` remains the changelog for the *language* as well as the extension, even though language changes now happen here.
@@ -97,11 +107,11 @@ The pipeline has two distinct stages: **parse** (text → `Node` tree) and **val
 [src/core/Parser.ts](src/core/Parser.ts) is the entry point. `parse()` throws on the first error; `parseResult()` returns a `ParseResult` accumulating all errors + nodes. The algorithm:
 
 - Split input into lines; each line → [LineParser.ts](src/core/LineParser.ts) `parseLine()` → a `Line` (level, content, isComment/isBlock flags). **Indentation = one level per tab or per 4 spaces** (`Constants.TAB_SPACES`); non-multiple-of-4 spacing or jumping more than one level deep is a `ParseException`.
-- A **stack** tracks open nodes by level. Going to a shallower level closes (`freeze()`s) nodes via `closeToLevel()`, attaching them to their parent or to the root document list.
+- A **stack** tracks open nodes by level. Going to a shallower level closes nodes via `closeToLevel()`, attaching them to their parent or to the root document list.
 - Line syntax: `Name: value` (inline node), `Name >>` followed by deeper-indented lines (text/block node — lines collected with `addTextLine`), `# ...` (comment).
 - Namespaces are written in parentheses after the name — `Name (a.b.c): value` — and parsed by [NameNamespaceParser.ts](src/core/NameNamespaceParser.ts), which lowercases them and **inherits the parent's namespace** when none is declared. [NamespaceValidator.ts](src/core/NamespaceValidator.ts) checks their shape.
 
-`Node` ([src/core/Node.ts](src/core/Node.ts)) is the output tree. Nodes are **immutable once frozen** (`Object.freeze` on children/textLines) — `freeze()` happens when a node is closed, so never mutate a node after parsing. Names are normalized (`StringUtils.normalize`) for lookups; `getQualifiedName()` = `namespace:name` (an internal lookup key, not the source syntax).
+`Node` ([src/core/Node.ts](src/core/Node.ts)) is the output tree. Nodes are mutable while parsing (`addChild`/`addTextLine`) and **must be treated as read-only once the document is closed** — immutability is by convention, there is no `Object.freeze` (the doc used to claim otherwise). Names are normalized (`StringUtils.normalize`) for lookups; `getQualifiedName()` = `namespace:name` (an internal lookup key, not the source syntax).
 
 [NodeWriter.ts](src/runtime/NodeWriter.ts) does the reverse trip — serializes a `Node` (or a document list) back to STXT text, with `IndentStyle.TABS` or `SPACES_4`.
 
