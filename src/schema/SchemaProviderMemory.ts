@@ -58,10 +58,16 @@ export class SchemaProviderMemory implements SchemaProvider {
     addSchema(txt: string): void {
         const parser: Parser = new Parser();
         const node: Node = parser.parse(txt)[0];
-        const schema: Schema = transformNodeToSchema(node);
 
+        // A schema that does not validate against its meta-schema must not be
+        // registered (same policy as UnifiedSchemaProvider/DiscoveryResolver)
         const schemaValidator = new SchemaValidator(new SchemaProviderMeta(), true);
-        schemaValidator.validate(node);
+        const errors = schemaValidator.validate(node);
+        if (errors.length > 0) {
+            throw errors[0];
+        }
+
+        const schema: Schema = transformNodeToSchema(node);
 
         const key = schema.getNamespace();
         this.schemas.set(key, schema);

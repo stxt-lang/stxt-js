@@ -36,7 +36,8 @@ export class TemplateSchemaProviderMemory extends SchemaProviderMemory {
      *
      * @param template text of the `@stxt.template` document.
      * @throws ValidationException with code `INVALID_SCHEMA` if the document does not hold exactly
-     *         one template, or if the resulting schema has no namespace.
+     *         one template or the resulting schema has no namespace, or the first validation error
+     *         if the template does not validate against the template meta-schema.
      */
     addTemplate(template: string): void {
         const parser = new Parser();
@@ -46,9 +47,13 @@ export class TemplateSchemaProviderMemory extends SchemaProviderMemory {
             throw new ValidationException(0, "INVALID_SCHEMA", `There are ${nodes.length}, and expected is 1`);
         }
 
-        // Validate the template against the template meta-schema
+        // A template that does not validate against the template meta-schema must not
+        // be registered (same policy as UnifiedSchemaProvider/DiscoveryResolver)
         const schemaValidator = new SchemaValidator(new MetaTemplateSchemaProvider(), true);
-        schemaValidator.validate(nodes[0]);
+        const errors = schemaValidator.validate(nodes[0]);
+        if (errors.length > 0) {
+            throw errors[0];
+        }
 
         // Build the schema out of the template
         const sch = transformTemplateNodeToSchema(nodes[0]);
