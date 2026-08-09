@@ -25,3 +25,16 @@ se separa de los documentos reales, no de una copia congelada. Si stxt-web no es
 al lado, los tests quedan como "pending" en vez de fallar; para indicar otra ruta:
 
   STXT_WEB=/ruta/a/stxt-web npm test
+
+  ## Referencia rápida
+
+```bash
+npm version X.Y.Z --no-git-tag-version     # 1. package.json + package-lock.json
+#   + entrada en ../stxt-vscode/stxt/CHANGELOG.md
+npm test                                    # 2. build + lint + 224 passing, 0 pending
+npm pack --dry-run                          # 3. 115 ficheros, sin out/test ni .js.map
+npm publish                                 # 4. inmediato e inmutable
+npm view @stxt-lang/core version            # 5. verificar desde el registro
+git tag -a vX.Y.Z -m "vX.Y.Z" && git push origin vX.Y.Z      # 6.
+#   7. subir el rango en ../stxt-vscode/stxt/package.json + npm install allí
+```
