@@ -25,6 +25,8 @@ export { transformNodeToSchema } from "./schema/SchemaParser";
 export { UnifiedSchemaProvider } from "./runtime/UnifiedSchemaProvider";
 export { ConditionalValidator } from "./runtime/ConditionalValidator";
 export { NodeWriter, IndentStyle } from "./runtime/NodeWriter";
+export { toCanonicalTree, toCanonicalJson } from "./runtime/TreeJson";
+export type { CanonicalDocument, CanonicalNode, CanonicalInlineNode, CanonicalBlockNode } from "./runtime/TreeJson";
 
 export { transformTemplateNodeToSchema } from "./template/TemplateParser";
 
