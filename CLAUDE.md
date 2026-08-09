@@ -1,91 +1,83 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Este archivo proporciona orientación a Claude Code (claude.ai/code) cuando trabaja con código en este repositorio.
 
-## Project
+## Proyecto
 
-A TypeScript parser for **STXT**, an indentation-based structured-text format. It compiles (via `tsc`) to a plain CommonJS Node package (`out/`), published to npm as **`@stxt-lang/core`** and consumed as a dependency — notably by the `../stxt-vscode/stxt` extension — rather than bundled into a browser artifact.
+Un analizador TypeScript para **STXT**, un formato de texto estructurado basado en la indentación. Se compila (mediante `tsc`) a un paquete Node CommonJS normal (`out/`), publicado en npm como **`@stxt-lang/core`** y consumido como dependencia — en particular por la extensión `../stxt-vscode/stxt` — en lugar de empaquetarse como un artefacto para navegador.
 
-This repo holds **all the STXT parser/schema classes for the JS/TS ecosystem** — it is the single source of truth for that logic in this language, not just one consumer among several. The sibling repo `../stxt-vscode/stxt` (the VSCode extension) imports this project as a Node dependency and contains **only** extension-specific code (commands, language server glue, UI); it must not have its own copies of parser/schema classes. When extension work seems to need parser/schema changes, make them here and have the extension consume the updated dependency.
+Este repositorio contiene **todas las clases del analizador/esquema de STXT para el ecosistema JS/TS** — es la fuente de verdad única para esa lógica en este lenguaje, no solo uno más entre varios consumidores. El repositorio hermano `../stxt-vscode/stxt` (la extensión de VSCode) importa este proyecto como dependencia de Node y contiene **solo** código específico de la extensión (comandos, glue del servidor de lenguaje, interfaz); no debe tener sus propias copias de las clases del analizador/esquema. Cuando el trabajo en la extensión parezca necesitar cambios en el analizador/esquema, hazlos aquí y deja que la extensión consuma la dependencia actualizada.
 
-`../stxt-java` is the sibling implementation of the same language for the Java ecosystem — it should have equivalent behaviour to this repo (same parsing/validation semantics), just in a different language. When changing behaviour here, consider whether the Java port needs the same change.
+`../stxt-java` es la implementación hermana del mismo lenguaje para el ecosistema Java — debería tener un comportamiento equivalente al de este repositorio (la misma semántica de análisis/validación), solo que en otro lenguaje. Cuando cambies comportamiento aquí, considera si el puerto Java necesita el mismo cambio.
 
-The normative language spec is **not** in this repo: it lives in the sibling repo `../stxt-web` (canonical Spanish in `es/`, English mirror in `en/`), and that remains the single shared spec for all language implementations (this repo and `../stxt-java`):
+La especificación normativa del lenguaje **no** está en este repositorio: vive en el repositorio hermano `../stxt-web` (español canónico en `es/`, espejo en inglés en `en/`), y sigue siendo la única especificación compartida para todas las implementaciones del lenguaje (este repositorio y `../stxt-java`):
 
-- `../stxt-web/es/stxt-core-ref.stxt` — base syntax (STXT-SPEC): indentation, inline nodes, text blocks, namespaces, comments, normalization, error codes.
-- `../stxt-web/es/stxt-schema-ref.stxt` — `@stxt.schema` (STXT-SCHEMA-SPEC): `Node`/`Children`/`Child`, types, cardinalities, plus the official meta-schema.
-- `../stxt-web/es/stxt-template-ref.stxt` — `@stxt.template` (STXT-TEMPLATE-SPEC): the simplified authoring form compilable to a schema.
-- `../stxt-web/es/stxt-discovery-ref.stxt` — schema discovery (STXT-DISCOVERY-SPEC, added 2026-08-02): `.stxt/` resolution directories, the per-document chain, per-namespace precedence, `STXT_PATH`, resolution errors.
+- `../stxt-web/es/stxt-core-ref.stxt` — sintaxis base (STXT-SPEC): indentación, nodos inline, bloques de texto, espacios de nombres, comentarios, normalización, códigos de error.
+- `../stxt-web/es/stxt-schema-ref.stxt` — `@stxt.schema` (STXT-SCHEMA-SPEC): `Node`/`Children`/`Child`, tipos, cardinalidades, además del metaesquema oficial.
+- `../stxt-web/es/stxt-template-ref.stxt` — `@stxt.template` (STXT-TEMPLATE-SPEC): la forma simplificada de autoría que se puede compilar a un esquema.
+- `../stxt-web/es/stxt-discovery-ref.stxt` — descubrimiento de esquemas (STXT-DISCOVERY-SPEC, añadido el 2026-08-02): directorios de resolución `.stxt/`, la cadena por documento, precedencia por espacio de nombres, `STXT_PATH`, errores de resolución.
 
-Consult those files before changing parser or schema semantics; behaviour changes here should follow the spec, not redefine it.
+Consulta esos archivos antes de cambiar la semántica del analizador o del esquema; los cambios de comportamiento aquí deben seguir la especificación, no redefinirla.
 
-## Next up (as of 2026-08-02)
+## Siguiente paso (a fecha de 2026-08-02)
 
-**`@stxt-lang/core@0.6.0` was published on 2026-08-02 and verified from the registry.** It is the release that adds the `src/discovery/` module — `DiscoveryResolver`, `DiscoveryResult`, `DiscoveryError` and the injected `DiscoveryFileSystem`/`DiscoveryEnvironment` interfaces — the reference implementation of **STXT-DISCOVERY-SPEC** (`../stxt-web/es/stxt-discovery-ref.stxt`, the new fourth spec, also 2026-08-02): resolution chain per document (every ancestor `.stxt/`, then user level, then system level, or the `STXT_PATH` override), per-namespace nearest-wins precedence, same-level duplicates as errors, level cache shared across documents. The resolver is host-agnostic on purpose — **no `node:fs`/`process` access in this package**; consumers inject adapters (`../stxt-cli` has the Node one, `../stxt-vscode/stxt` the `vscode.workspace.fs` one). `npm test` is 252 passing (28 new in `src/test/discovery.test.ts`, spec-conformance over an in-memory file system), and the README gained a discovery section whose snippets were run against `out/all.js` and typechecked in `strict` against the published `.d.ts`.
+**`@stxt-lang/core@0.6.0` se publicó el 2026-08-02 y se verificó en el registro.** Es la versión que añade el módulo `src/discovery/` — `DiscoveryResolver`, `DiscoveryResult`, `DiscoveryError` y las interfaces inyectadas `DiscoveryFileSystem`/`DiscoveryEnvironment` — la implementación de referencia de **STXT-DISCOVERY-SPEC** (`../stxt-web/es/stxt-discovery-ref.stxt`, la nueva cuarta especificación, también del 2026-08-02): cadena de resolución por documento (todos los `.stxt/` ascendientes, del más cercano al más lejano, luego nivel de usuario, luego nivel de sistema, o la sustitución `STXT_PATH`), precedencia nearest-wins por espacio de nombres, duplicados en el mismo nivel como errores, caché de nivel compartida entre documentos. El resolver es agnóstico al host a propósito — **sin acceso a `node:fs` ni a `process` en este paquete**; los consumidores inyectan adaptadores (`../stxt-cli` tiene el de Node, `../stxt-vscode/stxt` el de `vscode.workspace.fs`). `npm test` tiene 252 pruebas aprobadas (28 nuevas en `src/test/discovery.test.ts`, conformidad con la especificación sobre un sistema de archivos en memoria), y el README añadió una sección de discovery cuyos ejemplos se ejecutaron contra `out/all.js` y se verificaron en `strict` frente al `.d.ts` publicado.
 
-The implementation landed in `09b9259` and the README/CLAUDE.md pass in `c7fe605`, which carries the annotated tag `v0.6.0`; both pushed. The registry tarball is 125 files / 51.8 kB packed / 209.8 kB unpacked, with `out/discovery` complete (`.js` + `.d.ts`), README + LICENSE in, no `.js.map`, no `out/test`, and the JSDoc travelling in the `.d.ts`; installing it clean from npm resolves `DiscoveryResolver`/`DiscoveryResult`/`DiscoveryError` at runtime.
+La implementación quedó en `09b9259` y el paso de README/CLAUDE.md en `c7fe605`, que lleva la etiqueta anotada `v0.6.0`; ambos ya están enviados. El tarball del registro tiene 125 archivos / 51.8 kB empaquetados / 209.8 kB descomprimidos, con `out/discovery` completo (`.js` + `.d.ts`), README + LICENSE incluidos, sin `.js.map`, sin `out/test`, y el JSDoc viajando en el `.d.ts`; instalarlo limpio desde npm resuelve `DiscoveryResolver`/`DiscoveryResult`/`DiscoveryError` en tiempo de ejecución.
 
-Both consumers were reinstalled against it the same day and their lock files now resolve `0.6.0` from `registry.npmjs.org` (integrity `sha512-cwD9/jq…`), with no `/tmp` or `"link": true` leftovers. **Those two `package-lock.json` changes are still uncommitted, on purpose** — they get committed from their own repos. Worth knowing why it mattered: both had been running against a tarball in a `/tmp` scratchpad while their committed lock still claimed 0.5.3 from the registry, which works until `/tmp` is cleaned — the same class of failure as the old `npm link` leftovers, so it is the first thing to check whenever a consumer's install misbehaves. After the reinstall, `../stxt-vscode/stxt` compiles and passes its 410 tests and `../stxt-cli` passes its 16.
+Ambos consumidores se reinstalaron contra él ese mismo día y sus ficheros de bloqueo ahora resuelven `0.6.0` desde `registry.npmjs.org` (integridad `sha512-cwD9/jq…`), sin restos de `/tmp` ni de `"link": true`. **Esos dos cambios de `package-lock.json` siguen sin commit, a propósito** — se confirman desde sus propios repositorios. Merece la pena recordar por qué importaba: ambos estaban funcionando contra un tarball en un espacio de trabajo temporal `/tmp` mientras su lock committeado seguía diciendo 0.5.3 desde el registro, lo cual funciona hasta que `/tmp` se limpia — la misma clase de fallo que los antiguos restos de `npm link`, así que es lo primero que hay que comprobar cuando la instalación de un consumidor falla. Después de reinstalar, `../stxt-vscode/stxt` compila y pasa sus 410 pruebas y `../stxt-cli` pasa sus 16.
 
-**Still pending**: the Java port — `../stxt-java` has no discovery yet.
+**Sigue pendiente**: el puerto Java — `../stxt-java` todavía no tiene discovery.
 
-**Unreleased fix (2026-08-03, commit `5847d99`)**: `SchemaProviderMemory.addSchema` and
-`TemplateSchemaProviderMemory.addTemplate` used to call `schemaValidator.validate(node)` and
-**discard** the returned `ValidationException[]` — a leftover of the `Validator` contract change
-from throwing to collecting — so invalid definitions (e.g. a schema with `Type: FOO`) were
-silently registered. Both now throw the first error, the same policy as
-`UnifiedSchemaProvider.throwIfInvalid` and `DiscoveryResolver.compile`, and `addSchema` validates
-*before* transforming. Regression tests in `src/test/providers.test.ts` (4 tests; the suite is now
-**256 passing**). Found while building the `../stxt-impl` pseudocode blueprint. The registry
-0.6.0 does **not** include this fix — ship it with the next release.
+**Corrección sin publicar (2026-08-03, commit `5847d99`)**: `SchemaProviderMemory.addSchema` y `TemplateSchemaProviderMemory.addTemplate` solían llamar a `schemaValidator.validate(node)` y **descartar** el `ValidationException[]` devuelto — un resto del cambio de contrato de `Validator` de lanzar a acumular — de modo que las definiciones inválidas (por ejemplo, un esquema con `Type: FOO`) se registraban sin avisar. Ahora ambas lanzan el primer error, la misma política que `UnifiedSchemaProvider.throwIfInvalid` y `DiscoveryResolver.compile`, y `addSchema` valida *antes* de transformar. Pruebas de regresión en `src/test/providers.test.ts` (4 pruebas; la suite está ahora en **256 aprobadas**). Se detectó mientras se construía el blueprint pseudocódigo de `../stxt-impl`. El registro 0.6.0 **no** incluye esta corrección — hay que publicarla en la siguiente versión.
 
-Previous release: **`@stxt-lang/core@0.5.3` was published on 2026-07-31 and verified from the registry** (115 files, 173.7 kB unpacked, README + LICENSE in, no `.js.map`, no `out/test`, JSDoc travelling in the `.d.ts`). Commit `eb98af7`, annotated tag `v0.5.3` pushed. `npm test` is 224 passing.
+Versión anterior: **`@stxt-lang/core@0.5.3` se publicó el 2026-07-31 y se verificó en el registro** (115 archivos, 173.7 kB descomprimidos, README + LICENSE incluidos, sin `.js.map`, sin `out/test`, JSDoc viajando en el `.d.ts`). Commit `eb98af7`, etiqueta anotada `v0.5.3` enviada. `npm test` da 224 aprobadas.
 
-It is the documentation release that realigns this repo with `dev.stxt:stxt-core` 0.5.3 (published from `../stxt-java` the same day): every source comment translated to English and a JSDoc comment on every exported member, which `tsc` copies into `out/**/*.d.ts` — the TypeScript counterpart of the javadoc Java publishes to javadoc.io. The only user-visible change is the `NOT_STXT_SCHEMA` message, now `Expected schema(...) but got ...` like Java's; the code is unchanged and the exports of `all.ts` are untouched.
+Es la versión de documentación que realinea este repositorio con `dev.stxt:stxt-core` 0.5.3 (publicada desde `../stxt-java` el mismo día): todos los comentarios fuente traducidos al inglés y un comentario JSDoc en cada miembro exportado, que `tsc` copia a `out/**/*.d.ts` — el equivalente en TypeScript del javadoc que Java publica en javadoc.io. El único cambio visible para el usuario es el mensaje `NOT_STXT_SCHEMA`, ahora `Expected schema(...) but got ...` como en Java; el código no cambia y las exportaciones de `all.ts` permanecen intactas.
 
-The extension side of 0.5.3 is long done: `../stxt-vscode/stxt` has since shipped 0.5.4 and 0.5.5 (editor-layer releases — where schemas come from and when a document gets analysed — with core pinned at 0.5.3).
+La parte de la extensión de 0.5.3 ya quedó atrás: `../stxt-vscode/stxt` ha publicado desde entonces 0.5.4 y 0.5.5 (versiones de capa de editor — de dónde salen los esquemas y cuándo se analiza un documento — con core fijado en 0.5.3).
 
-The release procedure itself is now written down in [RELEASING.md](RELEASING.md), mirroring `../stxt-java/RELEASING.md`. It was drafted while doing 0.5.3, so its numbers (115 files, 41.9 kB packed) are the real ones of that release.
+El procedimiento de publicación está ahora documentado en [RELEASING.md](RELEASING.md), en paralelo con `../stxt-java/RELEASING.md`. Se redactó mientras se hacía 0.5.3, así que sus cifras (115 archivos, 41.9 kB empaquetados) son las reales de esa versión.
 
-0.5.2 (2026-07-28) closed the "polish the package's public face" list — README, LICENSE, npm metadata, tags, source maps, lock file — plus the `ValidationException` export. Both tags are in place and pushed: `v0.5.2` at `604477c` and `v0.5.1` retroactively at `a25e88e` (the `gitHead` the publish recorded). **Tagging is now part of the release routine**, and the tags here are annotated (`git tag -a -m "..."` — pass `-m` or git opens an editor).
+0.5.2 (2026-07-28) cerró la lista de "pulir la cara pública del paquete" — README, LICENSE, metadatos de npm, etiquetas, mapas de origen, archivo de bloqueo — además de la exportación `ValidationException`. Ambas etiquetas están creadas y enviadas: `v0.5.2` en `604477c` y `v0.5.1` retroactivamente en `a25e88e` (el `gitHead` que registró la publicación). **Etiquetar forma ahora parte de la rutina de publicación**, y las etiquetas aquí son anotadas (`git tag -a -m "..."` — pasa `-m` o git abre un editor).
 
-Ideas for whenever there is a next release, none urgent:
+Ideas para cuando haya una próxima versión, ninguna urgente:
 
-- The npm README is the only doc that shows the API in use; keep its examples honest (they were all executed against `out/all.js` before shipping — the first draft had invented schema syntax and wrong `Observer`/`NodeWriter` signatures).
-- `TypeRegistry`, `RuntimeException` and `SchemaProviderMemory` are still unexported. Export them only if a consumer actually needs them.
-- `SchemaParser.transformNodeToSchema` still carries a defensive `(schChild as any).getNormalizedName?.()` with a `CHILD_DEFINITION_API_MISMATCH` branch, left over from the Java port: `ChildDefinition` does expose the method, so the branch is dead. Removing it is a behaviour-preserving cleanup, kept out of 0.5.3 because that release was documentation only.
+- El README de npm es el único documento que muestra la API en uso; mantén honestos sus ejemplos (todos se ejecutaron contra `out/all.js` antes de publicar — el primer borrador había inventado sintaxis de esquema y firmas incorrectas de `Observer`/`NodeWriter`).
+- `TypeRegistry`, `RuntimeException` y `SchemaProviderMemory` siguen sin exportarse. Expórtalos solo si algún consumidor los necesita de verdad.
+- `SchemaParser.transformNodeToSchema` sigue arrastrando un defensivo `(schChild as any).getNormalizedName?.()` con una rama `CHILD_DEFINITION_API_MISMATCH`, heredado del puerto Java: `ChildDefinition` sí expone el método, así que la rama está muerta. Eliminarla es una limpieza que preserva el comportamiento, y se dejó fuera de 0.5.3 porque esa versión era solo de documentación.
 
-## The npm package: `@stxt-lang/core`
+## El paquete npm: `@stxt-lang/core`
 
-The step-by-step release procedure lives in [RELEASING.md](RELEASING.md) (mirroring `../stxt-java/RELEASING.md`); this section is the *why* behind it.
+El procedimiento paso a paso de publicación vive en [RELEASING.md](RELEASING.md) (en paralelo con `../stxt-java/RELEASING.md`); esta sección explica el *por qué*.
 
-This repo is published to npm as **`@stxt-lang/core`** — first release **0.5.1 on 2026-07-28**, **0.5.2 the same day**, **0.5.3 on 2026-07-31**, **0.6.0 on 2026-08-02**. The name was chosen over `@stxt-lang/parser` / `@stxt-lang/js` because "core" leaves room for future sibling JS packages without competing for the "main" name — a bet that paid off, since `../stxt-cli` now exists alongside it. The GitHub org `stxt-lang` and the npm scope `@stxt-lang` are both reserved by the user (the org also hosts `stxt-vscode`, `stxt-java`, `stxt-web`, `stxt-python`, `stxt-cms`, `stxt-impl`).
+Este repositorio se publica en npm como **`@stxt-lang/core`** — primera versión **0.5.1 el 2026-07-28**, **0.5.2 el mismo día**, **0.5.3 el 2026-07-31**, **0.6.0 el 2026-08-02**. Se eligió ese nombre en lugar de `@stxt-lang/parser` / `@stxt-lang/js` porque "core" deja espacio para futuros paquetes JS hermanos sin competir por el nombre "principal" — una apuesta que salió bien, porque `../stxt-cli` ya existe junto a él. La organización de GitHub `stxt-lang` y el scope npm `@stxt-lang` están reservados por el usuario (la organización también aloja `stxt-vscode`, `stxt-java`, `stxt-web`, `stxt-python`, `stxt-cms`, `stxt-impl`).
 
-Packaging facts worth knowing before touching `package.json`:
+Datos de empaquetado que conviene conocer antes de tocar `package.json`:
 
-- `name` is `@stxt-lang/core` with `publishConfig.access: "public"` — required, since scoped packages default to private.
-- `main`/`types` point at `out/all.js` / `out/all.d.ts`. **`src/all.ts` is the only public surface**: anything a consumer should be able to import has to be re-exported from there. It currently exports `Node`, `Parser`, `ParseResult`, `Line`, `Constants`, `parseLine`, `StringUtils`, `ParseException`, `ValidationException`, `Observer`, `Schema`, `SchemaValidator`, `SchemaProvider`, `NodeDefinition`, `ChildDefinition`, `transformNodeToSchema`, `UnifiedSchemaProvider`, `ConditionalValidator`, `NodeWriter`, `IndentStyle`, `transformTemplateNodeToSchema` and, since 0.6.0, `DiscoveryResolver`, `DiscoveryOptions`, `DiscoveryResult`, `DiscoveryDefinition`, `DiscoveryLevel`, `DiscoveryError`, `DiscoveryFileSystem`, `DiscoveryEntry`, `DiscoveryEnvironment`. Notably **not** exported: `TypeRegistry`, `RuntimeException`, `SchemaProviderMemory`.
-- `"prepare": "npm run build"` regenerates `out/` on install, and `"files"` is scoped to `out/all.js`, `out/all.d.ts` plus the `core`/`discovery`/`exceptions`/`processors`/`runtime`/`schema`/`template` subfolders — deliberately excluding `out/test` (build output of this repo's own regression tests) and, via the `"!out/**/*.js.map"` negation, the source maps (they dangled, because `src/` isn't published). **A new subfolder under `src/` needs its `out/` counterpart added here**, or it silently ships missing — that is why `out/discovery` went in with 0.6.0.
-- The licence is **MIT** across the `stxt-lang` org, copyright `stxt-lang`: `LICENSE` here, `LICENSE.txt` in `../stxt-vscode/stxt`. `package.json` said `ISC` until 0.5.2.
+- `name` es `@stxt-lang/core` con `publishConfig.access: "public"` — obligatorio, porque los paquetes con scope son privados por defecto.
+- `main`/`types` apuntan a `out/all.js` / `out/all.d.ts`. **`src/all.ts` es la única superficie pública**: todo lo que un consumidor deba poder importar tiene que reexportarse desde ahí. Actualmente exporta `Node`, `Parser`, `ParseResult`, `Line`, `Constants`, `parseLine`, `StringUtils`, `ParseException`, `ValidationException`, `Observer`, `Schema`, `SchemaValidator`, `SchemaProvider`, `NodeDefinition`, `ChildDefinition`, `transformNodeToSchema`, `UnifiedSchemaProvider`, `ConditionalValidator`, `NodeWriter`, `IndentStyle`, `transformTemplateNodeToSchema` y, desde 0.6.0, `DiscoveryResolver`, `DiscoveryOptions`, `DiscoveryResult`, `DiscoveryDefinition`, `DiscoveryLevel`, `DiscoveryError`, `DiscoveryFileSystem`, `DiscoveryEntry`, `DiscoveryEnvironment`. Notablemente **no** exporta: `TypeRegistry`, `RuntimeException`, `SchemaProviderMemory`.
+- `"prepare": "npm run build"` regenera `out/` al instalar, y `"files"` está acotado a `out/all.js`, `out/all.d.ts` más los subdirectorios `core`/`discovery`/`exceptions`/`processors`/`runtime`/`schema`/`template` — excluyendo deliberadamente `out/test` (salida de compilación de las propias pruebas de regresión de este repo) y, mediante la negación `"!out/**/*.js.map"`, los mapas de origen (quedaban colgando, porque `src/` no se publica). **Hace falta añadir aquí el equivalente en `out/` de cualquier nuevo subdirectorio bajo `src/`**, o se publicará en silencio sin él — por eso entró `out/discovery` con 0.6.0.
+- La licencia es **MIT** en toda la organización `stxt-lang`, copyright `stxt-lang`: `LICENSE` aquí, `LICENSE.txt` en `../stxt-vscode/stxt`. `package.json` decía `ISC` hasta 0.5.2.
 
-Tarball sizes, release by release: 0.5.1 was 169 files / 38 kB packed; 0.5.2 and 0.5.3 both 115 files, 27 kB and 41.9 kB packed (the difference is the JSDoc); 0.6.0 measures 125 files / 51.8 kB packed / 209.8 kB unpacked. The content is `.js` and `.d.ts` for the barrel plus the seven subfolders, plus `README.md` and `LICENSE`.
+Tamaños del tarball, versión a versión: 0.5.1 fueron 169 archivos / 38 kB empaquetados; 0.5.2 y 0.5.3 ambos 115 archivos, 27 kB y 41.9 kB empaquetados (la diferencia es el JSDoc); 0.6.0 mide 125 archivos / 51.8 kB empaquetados / 209.8 kB descomprimidos. El contenido es `.js` y `.d.ts` para el barrel, más los siete subdirectorios, más `README.md` y `LICENSE`.
 
-## How `../stxt-vscode/stxt` consumes this
+## Cómo consume esto `../stxt-vscode/stxt`
 
-The VSCode extension keeps **only** extension-specific code (11 files under `src/extension/` plus `src/extension.ts`, and its own `src/test/`) and depends on this package normally: `"dependencies": { "@stxt-lang/core": "^0.6.0" }`, resolved from the npm registry. It used to carry a duplicated copy of `core/`, `schema/`, `runtime/`, `processors/`, `exceptions/`, `template/` and `test/` (61 files) under its own `src/`; those were deleted with `git rm` when the split landed.
+La extensión de VSCode mantiene **solo** código específico de la extensión (11 archivos bajo `src/extension/` más `src/extension.ts`, y su propio `src/test/`) y depende de este paquete de forma normal: `"dependencies": { "@stxt-lang/core": "^0.6.0" }`, resuelto desde el registro npm. Antes llevaba una copia duplicada de `core/`, `schema/`, `runtime/`, `processors/`, `exceptions/`, `template/` y `test/` (61 archivos) dentro de su propio `src/`; se borraron con `git rm` cuando se hizo la separación.
 
-Versions moved in lockstep up to 0.5.3; they no longer do. The extension is on **0.5.5** — 0.5.4 and 0.5.5 were editor-layer releases with core unchanged at 0.5.3 — so read the two version numbers as independent from now on.
+Las versiones iban en bloque hasta 0.5.3; ya no. La extensión está en **0.5.5** — 0.5.4 y 0.5.5 fueron versiones de capa de editor con core sin cambios en 0.5.3 — así que interpreta los dos números de versión como independientes a partir de ahora.
 
-There is now a **second consumer**: `../stxt-cli` (version 0.1.0), which depends on `^0.6.0` too. It follows the same rule as the extension — no parser/schema classes of its own; its `src/discovery/NodeDiscovery.ts` is just the `node:fs` + `process.env` adapters for `DiscoveryResolver` plus a `createDiscoveryResolver()` factory. The whole point of discovery living here is that CLI and editor resolve schemas identically.
+Ahora hay un **segundo consumidor**: `../stxt-cli` (versión 0.1.0), que también depende de `^0.6.0`. Sigue la misma regla que la extensión — sin clases propias del analizador/esquema; su `src/discovery/NodeDiscovery.ts` son solo los adaptadores `node:fs` + `process.env` para `DiscoveryResolver` más una fábrica `createDiscoveryResolver()`. El objetivo de que discovery viva aquí es precisamente que la CLI y el editor resuelvan los esquemas de forma idéntica.
 
-Consequences to keep in mind:
+Consecuencias a tener en cuenta:
 
-- This repo's `npm test` (256 tests against the `../stxt-web` corpus) is the only regression suite for **the language**. The extension does have its own `npm test` again (410 tests), but by design it checks *editor-layer* invariants over that same corpus — that it colours within the line, formats without changing what the document says, and does not crash at any cursor position — explicitly leaving language conformance to this repo. So a parser/schema change is still only covered here; what the extension's suite catches is the editor regressing on documents already known to be valid.
-- A parser/schema fix therefore means: change it here → `npm test` → `npm publish` → bump the range in `stxt-vscode/stxt/package.json` **and `stxt-cli/package.json`** → `npm install` in each so the lock files record the new registry version.
-- Watch out for `file:`/`npm link` leftovers: after the rename, the extension's committed `package-lock.json` still had `"resolved": "../../stxt-js", "link": true`, which made a clean `npm install` there fail (it tried to build this repo instead of downloading the tarball). Fixed on 2026-07-28, but it's the failure mode to check first if the extension won't install.
-- `stxt-vscode/stxt/CHANGELOG.md` remains the changelog for the *language* as well as the extension, even though language changes now happen here.
+- El `npm test` de este repositorio (256 pruebas contra el corpus de `../stxt-web`) es la única suite de regresión para **el lenguaje**. La extensión sí vuelve a tener su propio `npm test` (410 pruebas), pero por diseño comprueba invariantes de *capa de editor* sobre ese mismo corpus — que colorea dentro de la línea, formatea sin cambiar lo que dice el documento y no se cuelga en ninguna posición del cursor — dejando explícitamente la conformidad del lenguaje a este repositorio. Así que un cambio en el analizador/esquema sigue cubriéndose solo aquí; lo que detecta la suite de la extensión es que el editor regrese en documentos ya conocidos como válidos.
+- Una corrección del analizador/esquema implica por tanto: cambiarlo aquí → `npm test` → `npm publish` → subir el rango en `stxt-vscode/stxt/package.json` **y `stxt-cli/package.json`** → `npm install` en cada uno para que los lock files registren la nueva versión del registro.
+- Ojo con restos de `file:`/`npm link`: después del renombrado, el `package-lock.json` committeado de la extensión seguía teniendo `"resolved": "../../stxt-js", "link": true`, lo que hacía fallar un `npm install` limpio allí (intentaba construir este repositorio en lugar de descargar el tarball). Se arregló el 2026-07-28, pero es el modo de fallo que conviene comprobar primero si la extensión no instala.
+- `stxt-vscode/stxt/CHANGELOG.md` sigue siendo el changelog del *lenguaje* además del de la extensión, aunque ahora los cambios del lenguaje ocurren aquí.
 
-## Commands
+## Comandos
 
 ```bash
 npm run build   # tsc: src/**/*.ts -> out/**/*.js (+ .d.ts + sourcemaps)
@@ -94,64 +86,64 @@ npm run lint    # eslint src --ext .ts
 npm test        # pretest (build + lint), then mocha over out/test/**/*.test.js
 ```
 
-See [help.txt](help.txt) for details on running tests. Tests are mocha `describe`/`it` suites under `src/test/*.test.ts` (compiled alongside the library, not a separate bundle) that run as regression checks against the real corpus in the sibling repo `../stxt-web` — they're skipped as "pending" rather than failing if that sibling isn't present, and `STXT_WEB=/path` overrides the lookup.
+Consulta [help.txt](help.txt) para más detalles sobre cómo ejecutar las pruebas. Las pruebas son suites mocha `describe`/`it` bajo `src/test/*.test.ts` (compiladas junto con la biblioteca, no como un bundle aparte) que actúan como pruebas de regresión contra el corpus real del repositorio hermano `../stxt-web` — se saltan como "pending" en vez de fallar si ese hermano no está presente, y `STXT_WEB=/path` sobrescribe la búsqueda.
 
-`tsconfig.json` has `strict` + `noEmitOnError`, so type errors fail the build.
+`tsconfig.json` tiene `strict` + `noEmitOnError`, así que los errores de tipos hacen fallar la compilación.
 
-## Architecture
+## Arquitectura
 
-The pipeline has two distinct stages: **parse** (text → `Node` tree) and **validate** (tree → schema conformance). They are decoupled — parsing never requires a schema.
+La tubería tiene dos etapas distintas: **parseo** (texto → árbol `Node`) y **validación** (árbol → conformidad con el esquema). Están desacopladas — el parseo nunca requiere un esquema.
 
-### Parse stage
+### Etapa de parseo
 
-[src/core/Parser.ts](src/core/Parser.ts) is the entry point. `parse()` throws on the first error; `parseResult()` returns a `ParseResult` accumulating all errors + nodes. The algorithm:
+[src/core/Parser.ts](src/core/Parser.ts) es el punto de entrada. `parse()` lanza en el primer error; `parseResult()` devuelve un `ParseResult` que acumula todos los errores + nodos. El algoritmo:
 
-- Split input into lines; each line → [LineParser.ts](src/core/LineParser.ts) `parseLine()` → a `Line` (level, content, isComment/isBlock flags). **Indentation = one level per tab or per 4 spaces** (`Constants.TAB_SPACES`); non-multiple-of-4 spacing or jumping more than one level deep is a `ParseException`.
-- A **stack** tracks open nodes by level. Going to a shallower level closes nodes via `closeToLevel()`, attaching them to their parent or to the root document list.
-- Line syntax: `Name: value` (inline node), `Name >>` followed by deeper-indented lines (text/block node — lines collected with `addTextLine`), `# ...` (comment).
-- Namespaces are written in parentheses after the name — `Name (a.b.c): value` — and parsed by [NameNamespaceParser.ts](src/core/NameNamespaceParser.ts), which lowercases them and **inherits the parent's namespace** when none is declared. [NamespaceValidator.ts](src/core/NamespaceValidator.ts) checks their shape.
+- Divide la entrada en líneas; cada línea → [LineParser.ts](src/core/LineParser.ts) `parseLine()` → un `Line` (nivel, contenido, banderas isComment/isBlock). **Indentación = un nivel por tabulación o por 4 espacios** (`Constants.TAB_SPACES`); un espaciado que no sea múltiplo de 4 o saltar más de un nivel de profundidad es un `ParseException`.
+- Una **pila** sigue los nodos abiertos por nivel. Bajar a un nivel menos profundo cierra nodos mediante `closeToLevel()`, adjuntándolos a su padre o a la lista raíz del documento.
+- Sintaxis de línea: `Name: value` (nodo inline), `Name >>` seguido de líneas con más indentación (nodo de texto/bloque — líneas recogidas con `addTextLine`), `# ...` (comentario).
+- Los espacios de nombres se escriben entre paréntesis después del nombre — `Name (a.b.c): value` — y los analiza [NameNamespaceParser.ts](src/core/NameNamespaceParser.ts), que los pasa a minúsculas y **hereda el espacio de nombres del padre** cuando no se declara ninguno. [NamespaceValidator.ts](src/core/NamespaceValidator.ts) comprueba su forma.
 
-`Node` ([src/core/Node.ts](src/core/Node.ts)) is the output tree. Nodes are mutable while parsing (`addChild`/`addTextLine`) and **must be treated as read-only once the document is closed** — immutability is by convention, there is no `Object.freeze` (the doc used to claim otherwise). Names are normalized (`StringUtils.normalize`) for lookups; `getQualifiedName()` = `namespace:name` (an internal lookup key, not the source syntax).
+`Node` ([src/core/Node.ts](src/core/Node.ts)) es el árbol de salida. Los nodos son mutables mientras se analiza (`addChild`/`addTextLine`) y **deben tratarse como solo lectura una vez cerrado el documento** — la inmutabilidad es por convención, no hay `Object.freeze` (el documento solía afirmar lo contrario). Los nombres se normalizan (`StringUtils.normalize`) para las búsquedas; `getQualifiedName()` = `namespace:name` (una clave interna de búsqueda, no la sintaxis fuente).
 
-[NodeWriter.ts](src/runtime/NodeWriter.ts) does the reverse trip — serializes a `Node` (or a document list) back to STXT text, with `IndentStyle.TABS` or `SPACES_4`.
+[NodeWriter.ts](src/runtime/NodeWriter.ts) hace el viaje inverso — serializa un `Node` (o una lista de documentos) de vuelta a texto STXT, con `IndentStyle.TABS` o `SPACES_4`.
 
-### Observers & Validators
+### Observadores y validadores
 
-`Parser` exposes `registerObserver()` and `registerValidator()`. [Observer](src/processors/Observer.ts) gets streaming callbacks (`onCreate`, `onTextLine`, `onComment`, `onFinish`) during parsing. [Validator](src/processors/Validator.ts) runs on each node when it's closed and returns `ValidationException[]` (collected into the `ParseResult`). This is the extension mechanism — schema validation is just a built-in `Validator`.
+`Parser` expone `registerObserver()` y `registerValidator()`. [Observer](src/processors/Observer.ts) recibe callbacks en streaming (`onCreate`, `onTextLine`, `onComment`, `onFinish`) durante el parseo. [Validator](src/processors/Validator.ts) se ejecuta en cada nodo cuando se cierra y devuelve `ValidationException[]` (acumuladas en el `ParseResult`). Este es el mecanismo de extensión — la validación del esquema no es más que un `Validator` integrado.
 
-### Schema stage
+### Etapa de esquema
 
-[Schema](src/schema/Schema.ts) holds `NodeDefinition`s, each with `ChildDefinition`s (min/max cardinality) and a type. [SchemaValidator.ts](src/schema/SchemaValidator.ts) (a `Validator`) checks a node against its schema: value type validation + child cardinality, optionally recursive. [ConditionalValidator.ts](src/runtime/ConditionalValidator.ts) wraps it so only namespaced nodes get validated.
+[Schema](src/schema/Schema.ts) contiene `NodeDefinition`s, cada una con `ChildDefinition`s (cardinalidad mínima/máxima) y un tipo. [SchemaValidator.ts](src/schema/SchemaValidator.ts) (un `Validator`) comprueba un nodo frente a su esquema: validación del tipo de valor + cardinalidad de hijos, opcionalmente de forma recursiva. [ConditionalValidator.ts](src/runtime/ConditionalValidator.ts) lo envuelve para que solo se validen los nodos con espacio de nombres.
 
-Value **types** live in [src/schema/type/](src/schema/type/) (INLINE, BLOCK, TEXT, BOOLEAN, INTEGER, NATURAL, NUMBER, DATE, TIMESTAMP, EMAIL, URL, HEXADECIMAL, BASE64, GROUP, ENUM), each implementing the [Type](src/schema/Type.ts) interface (`validate` + `getName`). They self-register in [TypeRegistry.ts](src/schema/TypeRegistry.ts) via a static initializer — **add a new type by importing+registering it there** and exporting it from `all.ts`.
+Los **tipos** de valor viven en [src/schema/type/](src/schema/type/) (INLINE, BLOCK, TEXT, BOOLEAN, INTEGER, NATURAL, NUMBER, DATE, TIMESTAMP, EMAIL, URL, HEXADECIMAL, BASE64, GROUP, ENUM), y cada uno implementa la interfaz [Type](src/schema/Type.ts) (`validate` + `getName`). Se autorregistran en [TypeRegistry.ts](src/schema/TypeRegistry.ts) mediante un inicializador estático — **añade un tipo nuevo importándolo y registrándolo ahí** y exportándolo desde `all.ts`.
 
-### Schemas vs. Templates (meta-namespaces)
+### Esquemas frente a plantillas (metaespacios de nombres)
 
-Schemas themselves are written in STXT. Two reserved namespaces drive this:
+Los propios esquemas se escriben en STXT. Dos espacios de nombres reservados controlan esto:
 
-- `@stxt.schema` — a schema definition document.
-- `@stxt.template` — a template document (a friendlier authoring form) that gets transformed into a schema.
+- `@stxt.schema` — un documento de definición de esquema.
+- `@stxt.template` — un documento plantilla (una forma de autoría más amable) que se transforma en un esquema.
 
-[UnifiedSchemaProvider](src/runtime/UnifiedSchemaProvider.ts) is the runtime hub: `addFile(text)` parses a document, detects the root namespace, validates it against the corresponding **meta-schema** (`SchemaProviderMeta` / `MetaTemplateSchemaProvider`), then transforms it to a `Schema` (`transformNodeToSchema` in [SchemaParser.ts](src/schema/SchemaParser.ts) / `transformTemplateNodeToSchema` in [TemplateParser.ts](src/template/TemplateParser.ts)) and registers it by namespace. `SchemaProvider` is the lookup interface (`getSchema(namespace)`); `SchemaProviderMemory` is the plain in-memory implementation.
+[UnifiedSchemaProvider](src/runtime/UnifiedSchemaProvider.ts) es el centro en tiempo de ejecución: `addFile(text)` analiza un documento, detecta el espacio de nombres raíz, lo valida contra el **metaesquema** correspondiente (`SchemaProviderMeta` / `MetaTemplateSchemaProvider`), luego lo transforma a un `Schema` (`transformNodeToSchema` en [SchemaParser.ts](src/schema/SchemaParser.ts) / `transformTemplateNodeToSchema` en [TemplateParser.ts](src/template/TemplateParser.ts)) y lo registra por espacio de nombres. `SchemaProvider` es la interfaz de consulta (`getSchema(namespace)`); `SchemaProviderMemory` es la implementación simple en memoria.
 
-### Discovery stage (0.6.0)
+### Etapa de discovery (0.6.0)
 
-A third stage sits *before* validation and answers "which schemas apply to this document?": [src/discovery/](src/discovery/), the reference implementation of STXT-DISCOVERY-SPEC.
+Una tercera etapa se sitúa *antes* de la validación y responde a "qué esquemas se aplican a este documento": [src/discovery/](src/discovery/), la implementación de referencia de STXT-DISCOVERY-SPEC.
 
-[DiscoveryResolver](src/discovery/DiscoveryResolver.ts) builds a document's resolution chain — every ancestor `.stxt/` nearest-first (the ascent does *not* stop at the first hit), then the user level, then the system level, unless `STXT_PATH` replaces the lot — loads every definition in every level, and applies **per-namespace** precedence: the nearest level defining a namespace wins, and further levels still contribute the namespaces it does not define. Two definitions of one namespace at the same level are a `DiscoveryError`, and that namespace ends up with *no* active definition (never a silent pick).
+[DiscoveryResolver](src/discovery/DiscoveryResolver.ts) construye la cadena de resolución de un documento — cada `.stxt/` ascendiente, del más cercano al más lejano (el ascenso *no* se detiene en la primera coincidencia), luego el nivel de usuario, luego el nivel de sistema, salvo que `STXT_PATH` lo sustituya todo — carga cada definición de cada nivel y aplica precedencia **por espacio de nombres**: gana el nivel más cercano que defina un espacio de nombres, y los niveles posteriores siguen aportando los espacios que no define. Dos definiciones de un mismo espacio de nombres en el mismo nivel son un `DiscoveryError`, y ese espacio de nombres acaba sin *ninguna* definición activa (nunca una elección silenciosa).
 
-Two design rules matter when touching this:
+Dos reglas de diseño importan al tocar esto:
 
-- **No `node:fs` or `process` in this package.** All host access goes through the injected [DiscoveryFileSystem](src/discovery/DiscoveryFileSystem.ts) and [DiscoveryEnvironment](src/discovery/DiscoveryEnvironment.ts); paths are opaque strings the resolver never parses itself. That is what lets `../stxt-cli` back it with `node:fs`, the extension with `vscode.workspace.fs`, and the tests with an in-memory tree.
-- Errors are **collected, not thrown** ([DiscoveryError](src/discovery/DiscoveryError.ts) is a plain class, not an exception): the spec wants a bad definition reported without stopping the rest from loading.
+- **No `node:fs` ni `process` en este paquete.** Todo acceso al host pasa por [DiscoveryFileSystem](src/discovery/DiscoveryFileSystem.ts) y [DiscoveryEnvironment](src/discovery/DiscoveryEnvironment.ts) inyectados; las rutas son cadenas opacas que el resolver nunca interpreta por su cuenta. Eso es lo que permite que `../stxt-cli` lo apoye con `node:fs`, la extensión con `vscode.workspace.fs` y las pruebas con un árbol en memoria.
+- Los errores se **acumulan, no se lanzan** ([DiscoveryError](src/discovery/DiscoveryError.ts) es una clase simple, no una excepción): la especificación quiere que se informe de una definición mala sin detener la carga del resto.
 
-[DiscoveryResult](src/discovery/DiscoveryResult.ts) implements `SchemaProvider`, so it drops straight into a `SchemaValidator`/`ConditionalValidator`, and additionally reports provenance (`getDefinition()` → file + level) and the chain itself. Levels are cached by directory across documents; call `clearCache()` when files may have changed.
+[DiscoveryResult](src/discovery/DiscoveryResult.ts) implementa `SchemaProvider`, así que encaja directamente en un `SchemaValidator`/`ConditionalValidator`, y además informa del origen (`getDefinition()` → archivo + nivel) y de la cadena en sí. Los niveles se cachean por directorio entre documentos; llama a `clearCache()` cuando los archivos puedan haber cambiado.
 
-### Public API
+### API pública
 
-[src/all.ts](src/all.ts) is the package's entry barrel; `package.json`'s `main`/`types` point at its compiled `out/all.js`/`out/all.d.ts`. Anything new that should be usable by consumers (e.g. the VSCode extension) must be re-exported from it — see [The npm package](#the-npm-package-stxt-langcore) above for the current export list and what's deliberately left out.
+[src/all.ts](src/all.ts) es el barrel de entrada del paquete; `package.json` apunta con `main`/`types` a su `out/all.js`/`out/all.d.ts` compilado. Todo lo nuevo que deba ser utilizable por consumidores (por ejemplo, la extensión de VSCode) debe reexportarse desde ahí — consulta [El paquete npm](#el-paquete-npm-stxt-langcore) más arriba para ver la lista actual de exportaciones y lo que se deja deliberadamente fuera.
 
-## Conventions
+## Convenciones
 
-- Errors are thrown as typed exceptions carrying an error **code** string: `ParseException`, `ValidationException`, `RuntimeException` (in [src/exceptions/](src/exceptions/)). Prefer these over raw `Error` and pass a stable code.
-- **Source comments, JSDoc and messages are in English** across the whole repo since 0.5.3 (they used to be in Spanish); keep new code that way. Every exported member carries a JSDoc comment with a summary sentence plus `@param`/`@returns`/`@throws` — `tsc` copies it into `out/**/*.d.ts`, which is what consumers see on hover, so a new export without JSDoc is an undocumented API. The wording is kept deliberately close to the javadoc of `../stxt-java`, so that the same class reads the same in both implementations.
+- Los errores se lanzan como excepciones tipadas con una cadena de **código** de error: `ParseException`, `ValidationException`, `RuntimeException` (en [src/exceptions/](src/exceptions/)). Prefiere estos a `Error` en bruto y pasa un código estable.
+- **Los comentarios fuente, el JSDoc y los mensajes están en inglés** en todo el repositorio desde 0.5.3 (antes estaban en español); mantén así el código nuevo. Cada miembro exportado lleva un comentario JSDoc con una frase resumen más `@param`/`@returns`/`@throws` — `tsc` lo copia a `out/**/*.d.ts`, que es lo que ven los consumidores al pasar el ratón, así que una exportación nueva sin JSDoc es una API sin documentar. La redacción se mantiene deliberadamente cerca del javadoc de `../stxt-java`, para que la misma clase se lea igual en ambas implementaciones.
