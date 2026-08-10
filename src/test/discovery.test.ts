@@ -319,6 +319,21 @@ describe("DiscoveryResolver", () => {
 			assert.ok(result.getSchema("com.acme.other"), "the non-conflicting namespace keeps working");
 		});
 
+		it("a nearer same-level conflict does not fall back to a farther definition of that namespace", async () => {
+			const fs = new MemoryFileSystem({
+				"/repo/.stxt/one.stxt": template("com.acme.doc", "One"),
+				"/repo/.stxt/two.stxt": template("com.acme.doc", "Two"),
+				"/home/ana/.stxt/farther.stxt": template("com.acme.doc", "Farther"),
+			});
+			const resolver = new DiscoveryResolver(fs, new TestEnvironment(null, "/home/ana/.stxt", null));
+
+			const result = await resolver.resolve("/repo");
+
+			assert.strictEqual(result.getDefinition("com.acme.doc"), undefined);
+			assert.strictEqual(result.getSchema("com.acme.doc"), null);
+			assert.ok(!result.getActiveDefinitions().some(definition => definition.namespace === "com.acme.doc"));
+		});
+
 		it("a file that does not parse is NOT_PARSEABLE", async () => {
 			const fs = new MemoryFileSystem({
 				"/repo/.stxt/broken.stxt": "This line has no colon and no block marker\n",

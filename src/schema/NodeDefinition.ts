@@ -30,7 +30,7 @@ export class NodeDefinition {
         this.type = type;
         this.description = description;
 
-        if (this.normalizedName.length === 0) {
+        if (!StringUtils.isValidNodeName(this.name)) {
             throw new ValidationException(line, "INVALID_NODE_NAME", `Node name not valid: ${name}`);
         }
     }

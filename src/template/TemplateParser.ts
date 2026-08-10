@@ -81,6 +81,12 @@ export function transformTemplateNodeToSchema(node: Node): Schema {
 
 /** Adds to the schema the definition a node of the structure declares, along with its children. */
 function addToSchema(schema: Schema, node: Node): void {
+	// A Structure line must use the template grammar's ':' form. The core parser
+	// also accepts BLOCK nodes here, so reject them explicitly (STXT-TEMPLATE-SPEC 6.3).
+	if (node.isTextNode()) {
+		throw new ValidationException(node.getLine(), "INVALID_CHILD_LINE", "Template Structure lines must use ':'");
+	}
+
 	// Get the qualified name
 	let namespace = node.getNamespace();
 	const name = node.getName();

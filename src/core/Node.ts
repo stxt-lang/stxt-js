@@ -10,9 +10,6 @@ import { StringUtils } from "./StringUtils";
  * as told apart by {@link Node.isTextNode}.
  */
 export class Node {
-	// STXT-SPEC 4.2: Unicode letters and digits (categories L and Nd) plus '-', '_' and space
-	private static readonly VALID_NAME = /^[\p{L}\p{Nd}\-_ ]+$/u;
-
 	private readonly name: string;
 	private readonly normalizedName: string;
 	private readonly namespace: string;
@@ -52,11 +49,7 @@ export class Node {
 			throw new RuntimeException("INLINE_VALUE_NOT_VALID", "Not empty value with textNode");
 		}
 
-		if (!Node.VALID_NAME.test(name)) {
-			throw new ParseException(line, "INVALID_NODE_NAME", `Node name contains invalid characters: ${name}`);
-		}
-
-		if (this.normalizedName.length === 0) {
+		if (!StringUtils.isValidNodeName(this.name)) {
 			throw new ParseException(line, "INVALID_NODE_NAME", `Node name not valid: ${name}`);
 		}
 	}

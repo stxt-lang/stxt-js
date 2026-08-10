@@ -29,7 +29,7 @@ export class ChildDefinition {
 
 		NamespaceValidator.validateNamespaceFormat(this.namespace, numLine);
 
-		if (this.normalizedName.length === 0) {
+		if (!StringUtils.isValidNodeName(this.name)) {
 			throw new ValidationException(numLine, "INVALID_NODE_NAME", `Node name not valid: ${name}`);
 		}
 	}

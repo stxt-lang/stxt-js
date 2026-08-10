@@ -1,5 +1,9 @@
 /** String normalization helpers used for names, namespaces and values. */
 export class StringUtils {
+	// STXT-SPEC 4.2 / 4.3: validate the logical name after NFC so that a
+	// decomposed spelling such as "e" + combining acute is accepted as "é".
+	private static readonly NODE_NAME = /^[\p{L}\p{Nd}\-_ ]+$/u;
+
 	private constructor() {
 	}
 
@@ -53,6 +57,20 @@ export class StringUtils {
 		return (s ?? "").trim().replace(/\s+/g, " ");
 	}
 
+	/**
+	 * Tells whether a value is a valid STXT node name.
+	 *
+	 * The test happens after NFC normalization: the source may use either the
+	 * precomposed or decomposed Unicode spelling of a letter with a diacritic.
+	 *
+	 * @param input name to validate.
+	 * @returns true if the name contains only permitted characters and has a non-empty canonical name.
+	 */
+	static isValidNodeName(input: string | null | undefined): boolean {
+		const nfc = this.compactSpaces(input).normalize("NFC");
+		return this.NODE_NAME.test(nfc) && this.normalize(nfc).length > 0;
+	}
+
 	// Used for the normalized name of the nodes (STXT-SPEC 4.3): NFC + lower case,
 	// keeping diacritics and non-Latin alphabets (IDN model)
 	/**
@@ -79,4 +97,3 @@ export class StringUtils {
 		return s;
 	}
 }
-

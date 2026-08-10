@@ -167,11 +167,10 @@ export class DiscoveryResolver {
             return cached;
         }
 
-        const level: DiscoveryLevel = { dir, definitions: new Map(), errors: [] };
-        const conflicted = new Set<string>();
+        const level: DiscoveryLevel = { dir, definitions: new Map(), conflictedNamespaces: new Set(), errors: [] };
 
         for (const file of await this.collectFiles(dir)) {
-            await this.loadFile(file, level, conflicted);
+            await this.loadFile(file, level);
         }
 
         this.levelCache.set(dir, level);
@@ -197,7 +196,7 @@ export class DiscoveryResolver {
 
     // Loads one file of a level: parses it and registers every root as a definition,
     // reporting the errors of spec section 8.
-    private async loadFile(file: string, level: DiscoveryLevel, conflicted: Set<string>): Promise<void> {
+    private async loadFile(file: string, level: DiscoveryLevel): Promise<void> {
         // Spec section 3: every file under a resolution directory must be a definition.
         if (!file.endsWith(STXT_EXTENSION)) {
             level.errors.push(new DiscoveryError(
@@ -225,13 +224,13 @@ export class DiscoveryResolver {
         }
 
         for (const node of nodes) {
-            this.loadRootNode(node, file, level, conflicted);
+            this.loadRootNode(node, file, level);
         }
     }
 
     // Validates one root node against its meta-schema, compiles it to a schema and
     // registers it in the level, detecting same-level duplicates.
-    private loadRootNode(node: Node, file: string, level: DiscoveryLevel, conflicted: Set<string>): void {
+    private loadRootNode(node: Node, file: string, level: DiscoveryLevel): void {
         const namespace = node.getNamespace();
         let schema: Schema;
 
@@ -259,10 +258,10 @@ export class DiscoveryResolver {
 
         // Spec section 8: on a same-level duplicate, never silently pick one of the
         // definitions — the namespace has no active definition while the conflict exists.
-        if (conflicted.has(key) || existing) {
+        if (level.conflictedNamespaces.has(key) || existing) {
             if (existing) {
                 level.definitions.delete(key);
-                conflicted.add(key);
+                level.conflictedNamespaces.add(key);
             }
 
             const firstFile = existing ? existing.file : "another file of this level";

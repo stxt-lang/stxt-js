@@ -27,6 +27,8 @@ export interface DiscoveryLevel {
     dir: string;
     /** Definitions of the level by lowercased target namespace, conflicts excluded. */
     definitions: Map<string, DiscoveryDefinition>;
+    /** Namespaces with a same-level conflict; they block fallback to farther levels. */
+    conflictedNamespaces: Set<string>;
     /** Resolution errors found while loading this level. */
     errors: DiscoveryError[];
 }
@@ -84,6 +86,12 @@ export class DiscoveryResult implements SchemaProvider {
         const key = StringUtils.lowerCase(namespace);
 
         for (const level of this.levels) {
+            // STXT-DISCOVERY-SPEC section 8: a closer conflict leaves the namespace
+            // without an active definition instead of falling back to a farther level.
+            if (level.conflictedNamespaces.has(key)) {
+                return undefined;
+            }
+
             const definition = level.definitions.get(key);
 
             if (definition) {
@@ -105,6 +113,12 @@ export class DiscoveryResult implements SchemaProvider {
         const result: DiscoveryDefinition[] = [];
 
         for (const level of this.levels) {
+            // Mark conflicts as seen so getActiveDefinitions() has the same semantics
+            // as getDefinition(): they block definitions in farther levels.
+            for (const key of level.conflictedNamespaces) {
+                seen.add(key);
+            }
+
             for (const [key, definition] of level.definitions) {
                 if (!seen.has(key)) {
                     seen.add(key);

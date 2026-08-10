@@ -46,6 +46,36 @@ describe("SchemaProviderMemory.addSchema", () => {
 		assert.strictEqual(provider.getAllSchemas().length, 1);
 		assert.ok(provider.getSchema("com.example.demo"));
 	});
+
+	it("rejects a schema Node whose value is not a valid STXT node name", () => {
+		const provider = new SchemaProviderMemory();
+		const invalidName = [
+			"Schema (@stxt.schema): com.example.demo",
+			"\tNode: Invalid!",
+			"",
+		].join("\n");
+
+		assert.throws(
+			() => provider.addSchema(invalidName),
+			(e: unknown) => e instanceof ValidationException && e.code === "INVALID_NODE_NAME"
+		);
+	});
+
+	it("rejects a schema Child whose value is not a valid STXT node name", () => {
+		const provider = new SchemaProviderMemory();
+		const invalidName = [
+			"Schema (@stxt.schema): com.example.demo",
+			"\tNode: Root",
+			"\t\tChildren:",
+			"\t\t\tChild: Invalid!",
+			"",
+		].join("\n");
+
+		assert.throws(
+			() => provider.addSchema(invalidName),
+			(e: unknown) => e instanceof ValidationException && e.code === "INVALID_NODE_NAME"
+		);
+	});
 });
 
 describe("TemplateSchemaProviderMemory.addTemplate", () => {
@@ -84,5 +114,20 @@ describe("TemplateSchemaProviderMemory.addTemplate", () => {
 
 		assert.strictEqual(provider.getAllSchemas().length, 1);
 		assert.ok(provider.getSchema("com.example.demo"));
+	});
+
+	it("rejects a BLOCK line inside Structure", () => {
+		const provider = new TemplateSchemaProviderMemory();
+		const invalidStructure = [
+			"Template (@stxt.template): com.example.demo",
+			"\tStructure >>",
+			"\t\tRoot >>",
+			"",
+		].join("\n");
+
+		assert.throws(
+			() => provider.addTemplate(invalidStructure),
+			(e: unknown) => e instanceof ValidationException && e.code === "INVALID_CHILD_LINE"
+		);
 	});
 });
