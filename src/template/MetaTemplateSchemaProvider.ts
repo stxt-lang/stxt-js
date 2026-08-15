@@ -5,7 +5,6 @@ import { Schema } from "../schema/Schema";
 import { SchemaProvider } from "../schema/SchemaProvider";
 
 import { ValidationException } from "../exceptions/ValidationException";
-import { RuntimeException } from "../exceptions/RuntimeException";
 import { transformTemplateNodeToSchema } from "./TemplateParser";
 
 /**
@@ -45,13 +44,16 @@ export class MetaTemplateSchemaProvider implements SchemaProvider {
 	/**
 	 * Serves the meta-schema of the template language.
 	 *
+	 * Follows the {@link SchemaProvider} contract: providers never throw "not found". Any
+	 * namespace other than `@stxt.template` yields `null`; only the `SchemaValidator`
+	 * reports `SCHEMA_NOT_FOUND`.
+	 *
 	 * @param namespace namespace whose schema is wanted; only `@stxt.template` is served.
-	 * @returns the meta-schema of the template language.
-	 * @throws RuntimeException with code `RESOURCE_NOT_FOUND` if any other namespace is asked for.
+	 * @returns the meta-schema of the template language, or `null` for any other namespace.
 	 */
-	getSchema(namespace: string): Schema {
+	getSchema(namespace: string): Schema | null {
 		if (namespace !== "@stxt.template") {
-			throw new RuntimeException("RESOURCE_NOT_FOUND", `Not found '${namespace}' in namespace: @stxt.template`);
+			return null;
 		}
 
 		// meta always exists once the constructor finished, but this mirrors the Java version

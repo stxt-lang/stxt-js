@@ -1,6 +1,6 @@
 {
   "name": "@stxt-lang/core",
-  "version": "0.6.2",
+  "version": "0.6.3",
   "description": "Parser and schema validator for STXT, an indentation-based structured-text format.",
   "main": "out/all.js",
   "types": "out/all.d.ts",

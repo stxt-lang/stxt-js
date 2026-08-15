@@ -3,7 +3,6 @@ import { SchemaProvider } from "./SchemaProvider";
 import { Parser } from "../core/Parser";
 import { Node } from "../core/Node";
 import { ValidationException } from "../exceptions/ValidationException";
-import { RuntimeException } from "../exceptions/RuntimeException";
 import { transformNodeToSchema } from "./SchemaParser";
 
 /**
@@ -96,13 +95,17 @@ export class SchemaProviderMeta implements SchemaProvider {
     /**
      * Serves the meta-schema of the schema language.
      *
+     * Follows the {@link SchemaProvider} contract: providers never throw "not found". Any
+     * namespace other than `@stxt.schema` yields `null`, so that this provider can sit at
+     * the end of a fallback chain (it is the default parent of {@link SchemaProviderMemory})
+     * and the {@link SchemaValidator} is the only one reporting `SCHEMA_NOT_FOUND`.
+     *
      * @param namespace namespace whose schema is wanted; only `@stxt.schema` is served.
-     * @returns the meta-schema of the schema language.
-     * @throws RuntimeException with code `RESOURCE_NOT_FOUND` if any other namespace is asked for.
+     * @returns the meta-schema of the schema language, or `null` for any other namespace.
      */
-    getSchema(namespace: string): Schema {
+    getSchema(namespace: string): Schema | null {
         if (namespace !== Schema.SCHEMA_NAMESPACE) {
-            throw new RuntimeException("RESOURCE_NOT_FOUND", `Not found '${namespace}' in namespace: ${Schema.SCHEMA_NAMESPACE}`);
+            return null;
         }
 
         if (!this.meta) {

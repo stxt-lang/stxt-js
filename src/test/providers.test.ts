@@ -2,6 +2,10 @@ import * as assert from "assert";
 import { SchemaProviderMemory } from "../schema/SchemaProviderMemory";
 import { TemplateSchemaProviderMemory } from "../template/TemplateSchemaProviderMemory";
 import { ValidationException } from "../exceptions/ValidationException";
+import { SchemaProviderMeta } from "../schema/SchemaProviderMeta";
+import { MetaTemplateSchemaProvider } from "../template/MetaTemplateSchemaProvider";
+import { SchemaValidator } from "../schema/SchemaValidator";
+import { Parser } from "../core/Parser";
 
 /**
  * Regression: a definition that does not validate against its meta-schema must never
@@ -129,5 +133,42 @@ describe("TemplateSchemaProviderMemory.addTemplate", () => {
 			() => provider.addTemplate(invalidStructure),
 			(e: unknown) => e instanceof ValidationException && e.code === "INVALID_CHILD_LINE"
 		);
+	});
+});
+
+/**
+ * SchemaProvider contract: providers never throw "not found". getSchema() returns null for a
+ * namespace they have no schema for, and only SchemaValidator turns that absence into the
+ * SCHEMA_NOT_FOUND finding. The meta providers used to throw RESOURCE_NOT_FOUND for any other
+ * namespace, which leaked through SchemaProviderMemory (whose default parent is the meta
+ * provider) and made a Validator throw instead of returning its errors.
+ */
+describe("SchemaProvider contract: null instead of 'not found' exceptions", () => {
+	it("SchemaProviderMeta returns null for any namespace other than @stxt.schema", () => {
+		const meta = new SchemaProviderMeta();
+		assert.strictEqual(meta.getSchema("com.example.unknown"), null);
+		assert.strictEqual(meta.getSchema("@stxt.template"), null);
+		assert.ok(meta.getSchema("@stxt.schema"));
+	});
+
+	it("MetaTemplateSchemaProvider returns null for any namespace other than @stxt.template", () => {
+		const meta = new MetaTemplateSchemaProvider();
+		assert.strictEqual(meta.getSchema("com.example.unknown"), null);
+		assert.strictEqual(meta.getSchema("@stxt.schema"), null);
+		assert.ok(meta.getSchema("@stxt.template"));
+	});
+
+	it("SchemaProviderMemory with the default meta parent returns null for an unknown namespace", () => {
+		const provider = new SchemaProviderMemory();
+		assert.strictEqual(provider.getSchema("com.example.unknown"), null);
+	});
+
+	it("SchemaValidator reports SCHEMA_NOT_FOUND as a finding, without throwing, for an unknown namespace", () => {
+		const validator = new SchemaValidator(new SchemaProviderMemory(), true);
+		const [doc] = new Parser().parse("Doc (com.example.unknown): x\n");
+
+		const errors = validator.validate(doc);
+		assert.strictEqual(errors.length, 1);
+		assert.strictEqual(errors[0].code, "SCHEMA_NOT_FOUND");
 	});
 });
