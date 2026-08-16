@@ -150,7 +150,7 @@ for (const error of result.getErrors()) {
 }
 ```
 
-Available value types: `INLINE`, `BLOCK`, `TEXT`, `BOOLEAN`, `INTEGER`, `NATURAL`, `NUMBER`, `DATE`, `TIMESTAMP`, `EMAIL`, `URL`, `HEXADECIMAL`, `BASE64`, `GROUP`, `ENUM`.
+Available value types: `INLINE`, `BLOCK`, `TEXT`, `MARKDOWN`, `BOOLEAN`, `INTEGER`, `NATURAL`, `NUMBER`, `DATE`, `TIME`, `TIMESTAMP`, `UUID`, `EMAIL`, `URL`, `HEXADECIMAL`, `BINARY`, `BASE64`, `GROUP`, `ENUM`.
 
 ## Finding the schemas: discovery
 
