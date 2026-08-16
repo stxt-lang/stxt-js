@@ -1,21 +1,23 @@
 import { Line } from "./Line";
 import { NameNamespaceParser } from "./NameNamespaceParser";
 import { Node } from "./Node";
+import { InlineNode } from "./InlineNode";
+import { TextNode } from "./TextNode";
 import { ParseException } from "../exceptions/ParseException";
 import { Constants } from "./Constants";
 
 /**
  * Builds the node a line opens, telling apart the INLINE form (`Name: value`) from the BLOCK one
- * (`Name >>`) and resolving the namespace against the parent.
+ * (`Name >>`). The node gets the namespace the line *declares*, if any; inheritance from the
+ * parent is resolved by the node itself through its parent link once it is attached
+ * ({@link Node.getNamespace}).
  *
  * @param lineIndent line already split into indentation and content.
  * @param lineNumber line number of the document where the node opens.
- * @param level indentation level of the node.
- * @param parent node currently open, whose namespace is inherited, or null at root level.
- * @returns the node the line opens, still with no children and no text lines.
+ * @returns the node the line opens, still detached, with no children and no text lines.
  * @throws ParseException if the line is not a valid node declaration.
  */
-export function createNode(lineIndent: Line, lineNumber: number, level: number, parent: Node | null): Node {
+export function createNode(lineIndent: Line, lineNumber: number): Node {
     const line = lineIndent.content;
 
     let name: string;
@@ -49,13 +51,8 @@ export function createNode(lineIndent: Line, lineNumber: number, level: number, 
         throw new ParseException(lineNumber, "INLINE_VALUE_NOT_VALID", `Line not valid: ${line}`);
     }
 
-    // Default namespace: inherited from the parent
-    const nameNamespace = NameNamespaceParser.parse(
-        name,
-        parent ? parent.getNamespace() : null,
-        lineNumber,
-        line
-    );
+    // The namespace the line declares, if any (empty when it inherits)
+    const nameNamespace = NameNamespaceParser.parse(name, null, lineNumber, line);
     name = nameNamespace.getName();
     const namespace = nameNamespace.getNamespace();
 
@@ -65,5 +62,7 @@ export function createNode(lineIndent: Line, lineNumber: number, level: number, 
     }
 
     // Create the node
-    return new Node(lineNumber, level, name, namespace, textNode, value);
+    return textNode
+        ? new TextNode(name, namespace, null, lineNumber)
+        : new InlineNode(name, namespace, value, lineNumber);
 }

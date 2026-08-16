@@ -15,7 +15,7 @@ export const ENUM: Type = {
             throw new ValidationException(node.getLine(),"NOT_ALLOWED_TEXT",`Not allowed text in node ${node.getQualifiedName()}`);
         }
 
-        const value = node.getValue();
+        const value = node.getText();
         const allowed = nodeDef.getValues(); // ReadonlySet<string>
 
         if (!nodeDef.isAllowedValue(value)) {

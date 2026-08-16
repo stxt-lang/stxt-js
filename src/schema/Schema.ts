@@ -48,7 +48,7 @@ export class Schema {
      * @throws ValidationException with code `NODE_DEF_ALREADY_DEFINED` if there already was a node definition with the same name.
      */
     addNodeDefinition(nodeDefinition: NodeDefinition): void {
-        const qname = nodeDefinition.getNormalizedName();
+        const qname = nodeDefinition.getCanonicalName();
 
         if (this.nodes.has(qname)) {
             throw new ValidationException(0, "NODE_DEF_ALREADY_DEFINED", `Exists a previous node definition with: ${qname}`);

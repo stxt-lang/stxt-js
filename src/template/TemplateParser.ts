@@ -1,4 +1,5 @@
 import { Node } from "../core/Node";
+import { InlineNode } from "../core/InlineNode";
 import { Parser } from "../core/Parser";
 import { ValidationException } from "../exceptions/ValidationException";
 
@@ -23,10 +24,10 @@ import { TypeRegistry } from "../schema/TypeRegistry";
  */
 export function transformTemplateNodeToSchema(node: Node): Schema {
 	// Set the namespace
-	const result = new Schema(node.getValue(), node.getLine(), undefined);
+	const result = new Schema(node.getText(), node.getLine(), undefined);
 
-	// Look for the structure node
-	const structure = node.getChild("structure");
+	// Look for the structure node (a template is an inline root; a text root has none)
+	const structure = node instanceof InlineNode ? node.getChild("structure") : null;
 	if (!structure) {
 		throw new ValidationException(node.getLine(), "TEMPLATE_STRUCTURE_REQUIRED", "Template must define 'Structure >>'");
 	}
@@ -57,7 +58,7 @@ export function transformTemplateNodeToSchema(node: Node): Schema {
 	}
 
 	// Look for the descriptions
-	const description = node.getChild("description");
+	const description = (node as InlineNode).getChild("description");
 	if (description) {
 		const text = description.getText();
 		try {
@@ -83,7 +84,7 @@ export function transformTemplateNodeToSchema(node: Node): Schema {
 function addToSchema(schema: Schema, node: Node): void {
 	// A Structure line must use the template grammar's ':' form. The core parser
 	// also accepts BLOCK nodes here, so reject them explicitly (STXT-TEMPLATE-SPEC 6.3).
-	if (node.isTextNode()) {
+	if (!(node instanceof InlineNode)) {
 		throw new ValidationException(node.getLine(), "INVALID_CHILD_LINE", "Template Structure lines must use ':'");
 	}
 
@@ -166,12 +167,12 @@ function addToSchema(schema: Schema, node: Node): void {
 		const reference = type.substring(1).trim();
 
 		// Reference and explicit type on the same line (STXT-TEMPLATE-SPEC 14.13)
-		const explicitType = referenceType(reference, node.getNormalizedName());
+		const explicitType = referenceType(reference, node.getCanonicalName());
 		if (explicitType) {
 			throw new ValidationException(node.getLine(), "REFERENCE_WITH_TYPE_NOT_ALLOWED", `Reference '@${node.getName()}' can not declare a type: ${explicitType}`);
 		}
 
-		if (StringUtils.normalize(reference) !== node.getNormalizedName()) {
+		if (StringUtils.normalize(reference) !== node.getCanonicalName()) {
 			throw new ValidationException(node.getLine(), "NODE_REFERENCE_NOT_VALID", `Reference must be '@${node.getName()}', not '${reference}'`);
 		}
 
@@ -199,6 +200,10 @@ function addToSchema(schema: Schema, node: Node): void {
 
 	// Add the children
 	for (const child of childrenNode) {
+		// STXT-TEMPLATE-SPEC 6.3: every Structure line uses ':', so a child is inline too
+		if (!(child instanceof InlineNode)) {
+			throw new ValidationException(child.getLine(), "INVALID_CHILD_LINE", "Template Structure lines must use ':'");
+		}
 		cl = ChildLineParser.parse(child.getValue(), child.getLine());
 
 		const childName = child.getName();
@@ -252,7 +257,7 @@ function addDescriptions(schema: Schema, nodes: Node[]) {
 		}
 
 		// No children either
-		if (node.getChildren().length > 0) {
+		if (node instanceof InlineNode && node.getChildren().length > 0) {
 			throw new ValidationException(node.getLine(), "CHILDREN_DESCRIPTION_NOT_ALLOWED", "Not allowed children in description");
 		}
 

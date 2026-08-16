@@ -1,4 +1,6 @@
 import { Node } from "../core/Node";
+import { InlineNode } from "../core/InlineNode";
+import { TextNode } from "../core/TextNode";
 
 /** Canonical JSON representation of a parsed STXT document (STXT-TREE-SPEC). */
 export type CanonicalDocument = CanonicalNode[];
@@ -50,22 +52,23 @@ export function toCanonicalJson(nodes: ReadonlyArray<Node>): string {
 }
 
 function toCanonicalNode(node: Node): CanonicalNode {
-	if (node.isTextNode()) {
+	if (node instanceof TextNode) {
 		return {
 			name: node.getName(),
-			canonicalName: node.getNormalizedName(),
+			canonicalName: node.getCanonicalName(),
 			namespace: node.getNamespace(),
 			form: "block",
 			lines: [...node.getTextLines()],
 		};
 	}
 
+	const inline = node as InlineNode;
 	return {
-		name: node.getName(),
-		canonicalName: node.getNormalizedName(),
-		namespace: node.getNamespace(),
+		name: inline.getName(),
+		canonicalName: inline.getCanonicalName(),
+		namespace: inline.getNamespace(),
 		form: "inline",
-		value: node.getValue(),
-		children: node.getChildren().map(child => toCanonicalNode(child)),
+		value: inline.getValue(),
+		children: inline.getChildren().map(child => toCanonicalNode(child)),
 	};
 }

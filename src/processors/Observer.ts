@@ -1,5 +1,6 @@
 import { Line } from "../core/Line";
 import { Node } from "../core/Node";
+import { TextNode } from "../core/TextNode";
 
 /**
  * Process hook notified by the {@link Parser} while parsing: when each node is opened and closed,
@@ -34,5 +35,5 @@ export interface Observer {
 	 * @param lineString source line, as it appears in the document.
 	 * @param line the same line already split into indentation and content.
 	 */
-	onTextLine(node: Node, lineNumber: number, lineString: string, line: Line): void;
+	onTextLine(node: TextNode, lineNumber: number, lineString: string, line: Line): void;
 }

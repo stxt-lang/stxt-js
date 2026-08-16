@@ -15,7 +15,7 @@ export const URL: Type = {
 			throw new ValidationException(n.getLine(), "NOT_ALLOWED_TEXT", `Not allowed text in node ${n.getQualifiedName()}`);
 		}
 
-		const url = n.getValue();
+		const url = n.getText();
 
 		try {
 			const parsed = new globalThis.URL(url);

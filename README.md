@@ -41,7 +41,7 @@ The package ships CommonJS plus type declarations, so it works from both TypeScr
 ## Parsing
 
 ```ts
-import { Parser, ParseResult, Node } from '@stxt-lang/core';
+import { Parser, ParseResult, Node, InlineNode } from '@stxt-lang/core';
 
 const text = [
     'Article (blog.post):',
@@ -62,14 +62,50 @@ if (result.hasErrors()) {
 
 const article: Node = result.getNodes()[0];
 
-console.log(article.getName());                     // "Article"
-console.log(article.getNamespace());                // "blog.post"
-console.log(article.getChild('Title')?.getValue()); // "Getting started with STXT"
+console.log(article.getName());       // "Article"
+console.log(article.getNamespace());  // "blog.post"
+if (article instanceof InlineNode) {
+    console.log(article.getChild('Title')?.getText()); // "Getting started with STXT"
+}
 ```
 
 Use `parser.parse(text)` instead if you prefer an exception (`ParseException`) on the first error.
 
-Nodes are **frozen once parsed** — treat the tree as immutable.
+## Working with the tree
+
+`Node` is an abstract class with exactly two forms, and each one owns only what is really its own: `InlineNode` (`Name: value`) has the optional value, the children and the child lookups (`getChildren()`, `getChild(name)`, `getChildrenByName(name)`); `TextNode` (`Name >>`) has the literal text lines and nothing else. What they share lives in `Node`: name and canonical name, declared and effective namespace, source line, parent (always an `InlineNode`) and `getText()` — the value of an inline node or the joined lines of a text node. Walking a tree therefore asks for the form (`node instanceof InlineNode`), the same way the canonical tree of STXT-TREE-SPEC has `children` only for inline nodes.
+
+Trees are mutable and keep their own integrity: every node knows its parent, `addChild` links both ends and refuses a node that already has one, and `removeChild` / `detach()` undo it. Levels are derived from the chain of parents; the source line is only set by the parser.
+
+```ts
+import { InlineNode, TextNode, Node } from '@stxt-lang/core';
+
+const email = new InlineNode('Email', 'com.example.docs', 'Weekly report');
+email.addInlineNode('From', 'ana@example.com');
+const to = email.addInlineNode('To');
+to.addInlineNode('Address', 'bob@example.com');
+const body = email.addTextNode('Body', 'Hi Bob,\n\nSee attached.');
+
+body.getParent() === email;   // true
+body.getLevel();              // 1
+to.getNamespace();            // "com.example.docs", inherited
+to.getDeclaredNamespace();    // "" — it declares none
+
+// Reorganise: move "To" to the front
+to.detach();
+email.addChild(to, 0);
+
+// Edit in place
+email.setNamespace('com.example.mail');   // the whole inheriting subtree follows
+body.setText('Hi Bob,\n\nSee the new attachment.');
+
+for (const child of email.getChildren()) {
+    if (child instanceof InlineNode) { console.log(child.getValue(), child.getChildren().length); }
+    if (child instanceof TextNode)   { console.log(child.getTextLines()); }
+}
+```
+
+Overloads with two strings always take the second one as the *content* (value or text); the namespace only appears in the three-argument forms. Adding a node that already has a parent throws `NODE_ALREADY_ATTACHED`; adding an ancestor throws `NODE_CYCLE`.
 
 ## Validating against a schema
 
@@ -259,7 +295,7 @@ const doc = NodeWriter.toSTXTDocs(result.getNodes(), IndentStyle.SPACES_4);
 
 Everything importable from the package:
 
-- **Parsing** — `Node`, `Parser`, `ParseResult`, `Line`, `Constants`, `parseLine`, `StringUtils`
+- **Parsing** — `Node`, `InlineNode`, `TextNode`, `Parser`, `ParseResult`, `Line`, `Constants`, `parseLine`, `StringUtils`
 - **Exceptions** — `ParseException`, `ValidationException`
 - **Extension points** — `Observer`
 - **Schemas** — `Schema`, `SchemaValidator`, `SchemaProvider`, `NodeDefinition`, `ChildDefinition`, `transformNodeToSchema`, `transformTemplateNodeToSchema`

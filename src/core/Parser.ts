@@ -1,4 +1,6 @@
 import { Node } from "./Node";
+import { InlineNode } from "./InlineNode";
+import { TextNode } from "./TextNode";
 import { parseLine } from "./LineParser";
 import { Line } from "./Line";
 import { createNode } from "./NodeCreator";
@@ -82,7 +84,7 @@ export class Parser {
 		}
 
 		// Close every node still open at EOF
-		this.closeToLevel(stack, documents, 0, result);
+		this.closeToLevel(stack, 0, result);
 
 		// Add the nodes to the result
 		for (const doc of documents) {
@@ -96,8 +98,9 @@ export class Parser {
 	private processLine(lineString: string, lineNumber: number, stack: Node[], documents: Node[], result: ParseResult): void {
 		try {
 			const lastNode: Node | null = stack.length === 0 ? null : stack[stack.length - 1];
-			const lastLevel = lastNode ? lastNode.getLevel() : 0;
-			const lastNodeText = lastNode ? lastNode.isTextNode() : false;
+			// The stack holds the open nodes, one per level: its size is the level of the next line's parent
+			const lastLevel = lastNode ? stack.length - 1 : 0;
+			const lastNodeText = lastNode instanceof TextNode;
 
 			// Parse the line
 			const line: Line = parseLine(lineString, lastNodeText, lastLevel, lineNumber);
@@ -115,11 +118,12 @@ export class Parser {
 			// When we are inside a text node and the level says it is still text,
 			// append the text line instead of creating a node.
 			if (line.isBlock) {
-				lastNode!.addTextLine(line.content);
+				const textNode = lastNode as TextNode;
+				textNode.addTextLine(line.content);
 
 				// Notify the observers about the text line
 				this.observers.forEach(observer => {
-					observer.onTextLine(lastNode!, lineNumber, lineString, line);
+					observer.onTextLine(textNode, lineNumber, lineString, line);
 				});
 
 				return;
@@ -130,12 +134,20 @@ export class Parser {
 				return;
 			}
 
-			// Close the nodes down to the current level (this "finishes" them and attaches them to the parent/documents)
-			this.closeToLevel(stack, documents, currentLevel, result);
+			// Close the nodes down to the current level (this "finishes" them: validators and observers run)
+			this.closeToLevel(stack, currentLevel, result);
 
-			// Create the new node and leave it "open" on the stack (do NOT attach it yet)
+			// Create the new node, attach it to its parent (or to the documents if it is a root)
+			// and leave it "open" on the stack. Attaching links both ends: the node already knows
+			// its parent, and so its effective namespace and its level, when the observers see it.
+			// The parent is always an InlineNode: a TextNode on top of the stack only takes text lines.
 			const parent: Node | null = stack.length === 0 ? null : stack[stack.length - 1];
-			const node = createNode(line, lineNumber, currentLevel, parent);
+			const node = createNode(line, lineNumber);
+			if (parent === null) {
+				documents.push(node);
+			} else {
+				(parent as InlineNode).addChild(node);
+			}
 
 			// Hand it over to the observers
 			this.observers.forEach(observer => {
@@ -161,7 +173,7 @@ export class Parser {
 		}
 	}
 
-	private closeToLevel(stack: Node[], documents: Node[], targetLevel: number, result: ParseResult): void {
+	private closeToLevel(stack: Node[], targetLevel: number, result: ParseResult): void {
 		while (stack.length > targetLevel) {
 			const completed = stack.pop()!;
 
@@ -176,12 +188,6 @@ export class Parser {
 					this.handleError(e, completed.getLine(), result, "VALIDATION_ERROR", "UNKNOWN_VALIDATION_ERROR");
 				}
 			});
-
-			if (stack.length === 0) {
-				documents.push(completed);
-			} else {
-				stack[stack.length - 1].addChild(completed);
-			}
 
 			// Hand it over to the observers
 			this.observers.forEach(observer => {

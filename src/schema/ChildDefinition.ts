@@ -40,6 +40,14 @@ export class ChildDefinition {
 	}
 
 	/** @returns the canonical name of the expected child. */
+	getCanonicalName(): string {
+		return this.normalizedName;
+	}
+
+	/**
+	 * @returns the canonical name of the expected child.
+	 * @deprecated since 0.7.0, use getCanonicalName().
+	 */
 	getNormalizedName(): string {
 		return this.normalizedName;
 	}

@@ -1,4 +1,6 @@
 import { Node } from "../core/Node";
+import { InlineNode } from "../core/InlineNode";
+import { TextNode } from "../core/TextNode";
 
 /** Indentation style to use when writing. */
 export enum IndentStyle {
@@ -21,7 +23,7 @@ export class NodeWriter {
 	 */
 	static toSTXT(node: Node, style: IndentStyle = IndentStyle.TABS): string {
 		const out: string[] = [];
-		NodeWriter.writeNode(out, node, 0, style, "");
+		NodeWriter.writeNode(out, node, 0, style);
 		return out.join("");
 	}
 
@@ -38,39 +40,41 @@ export class NodeWriter {
 			if (i > 0) {
 				out.push("\n");
 			}
-			NodeWriter.writeNode(out, docs[i], 0, style, "");
+			NodeWriter.writeNode(out, docs[i], 0, style);
 		}
 		return out.join("");
 	}
 
-	private static writeNode(out: string[], n: Node, depth: number, style: IndentStyle, parentNs: string): void {
+	private static writeNode(out: string[], n: Node, depth: number, style: IndentStyle): void {
 		NodeWriter.indent(out, depth, style);
 
-		const ns = n.getNamespace();
+		// The namespace is written where the node declares it; inherited ones are implicit,
+		// exactly as in the source (the effective namespace is the same either way)
+		const ns = n.getDeclaredNamespace();
 
 		out.push(n.getName());
-		if (ns.length > 0 && ns !== parentNs){
+		if (ns.length > 0) {
 			 out.push(" (", ns, ")");
 		}
 
-		if (n.isTextNode()) {
+		if (n instanceof TextNode) {
 			out.push(" >>\n");
 
 			for (const line of n.getTextLines()) {
 				NodeWriter.indent(out, depth + 1, style);
 				out.push(line, "\n");
 			}
-		} else {
+		} else if (n instanceof InlineNode) {
 			out.push(":");
 			const value = n.getValue();
 			if (value.length > 0) {
 				out.push(" ", value);
 			}
 			out.push("\n");
-		}
 
-		for (const child of n.getChildren()) {
-			NodeWriter.writeNode(out, child, depth + 1, style, ns);
+			for (const child of n.getChildren()) {
+				NodeWriter.writeNode(out, child, depth + 1, style);
+			}
 		}
 	}
 

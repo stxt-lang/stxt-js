@@ -1,4 +1,5 @@
 import { Node } from "../core/Node";
+import { InlineNode } from "../core/InlineNode";
 import { ValidationException } from "../exceptions/ValidationException";
 import { Validator } from "../processors/Validator";
 
@@ -47,8 +48,8 @@ export class SchemaValidator implements Validator {
         // Validate the node
         errors.push(...this.validateAgainstSchema(node, schema));
 
-        // Validate the children
-        if (this.recursiveValidation) {
+        // Validate the children (only an inline node has any)
+        if (this.recursiveValidation && node instanceof InlineNode) {
             for (const childNode of node.getChildren()){
                 errors.push(...this.validate(childNode));
             }
@@ -66,10 +67,10 @@ export class SchemaValidator implements Validator {
      */
     validateAgainstSchema(node: Node, schema: Schema): ValidationException[] {
         const errors: ValidationException[] = [];
-        const schemaNode = schema.getNodeDefinition(node.getNormalizedName());
+        const schemaNode = schema.getNodeDefinition(node.getCanonicalName());
 
         if (!schemaNode) {
-            const error = `NOT EXIST NODE ${node.getNormalizedName()} for namespace ${schema.getNamespace()}`;
+            const error = `NOT EXIST NODE ${node.getCanonicalName()} for namespace ${schema.getNamespace()}`;
             errors.push(new ValidationException(node.getLine(), "NODE_NOT_EXIST_IN_SCHEMA", error));
             return errors;
         }
@@ -81,12 +82,17 @@ export class SchemaValidator implements Validator {
         return errors;
     }
 
+    // The children of a node for the purposes of the content model: a text node has none
+    private static childrenOf(node: Node): ReadonlyArray<Node> {
+        return node instanceof InlineNode ? node.getChildren() : [];
+    }
+
     // Closed content model (STXT-SCHEMA-SPEC, section 6): only the direct children declared
     // in the definition of the parent are allowed; with no Children, nothing is
     private static validateChildrenDeclared(nodeDef: NodeDefinition, node: Node): ValidationException[] {
         const errors: ValidationException[] = [];
 
-        for (const child of node.getChildren()) {
+        for (const child of SchemaValidator.childrenOf(node)) {
             if (!nodeDef.getChildren().has(child.getQualifiedName())) {
                 errors.push(new ValidationException(child.getLine(), "CHILD_NOT_DECLARED", `Child '${child.getQualifiedName()}' not declared in node '${node.getQualifiedName()}'`));
             }
@@ -125,7 +131,7 @@ export class SchemaValidator implements Validator {
         const count = new Map<string, number>();
         const childrenByType = new Map<string, Node[]>();
 
-        for (const child of node.getChildren()) {
+        for (const child of SchemaValidator.childrenOf(node)) {
             const childName = child.getQualifiedName();
             count.set(childName, (count.get(childName) ?? 0) + 1);
 

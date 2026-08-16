@@ -3,6 +3,8 @@
 // has to be re-exported from here.
 
 export { Node } from "./core/Node";
+export { InlineNode } from "./core/InlineNode";
+export { TextNode } from "./core/TextNode";
 export { Parser } from "./core/Parser";
 export { ParseResult } from "./core/ParseResult";
 export { Line } from "./core/Line";

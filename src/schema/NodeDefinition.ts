@@ -41,6 +41,14 @@ export class NodeDefinition {
     }
 
     /** @returns the canonical name of the node. */
+    getCanonicalName(): string {
+        return this.normalizedName;
+    }
+
+    /**
+     * @returns the canonical name of the node.
+     * @deprecated since 0.7.0, use getCanonicalName().
+     */
     getNormalizedName(): string {
         return this.normalizedName;
     }

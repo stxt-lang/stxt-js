@@ -2,6 +2,7 @@ import { Schema } from "./Schema";
 import { NodeDefinition } from "./NodeDefinition";
 import { ChildDefinition } from "./ChildDefinition";
 import { Node } from "../core/Node";
+import { InlineNode } from "../core/InlineNode";
 import { ValidationException } from "../exceptions/ValidationException";
 import { RuntimeException } from "../exceptions/RuntimeException";
 import { NameNamespaceParser } from "../core/NameNamespaceParser";
@@ -16,27 +17,28 @@ import { TypeRegistry } from "./TypeRegistry";
  */
 export function transformNodeToSchema(node: Node): Schema {
     // Node name
-    const nodeName = node.getNormalizedName();
+    const nodeName = node.getCanonicalName();
     const namespaceSchema = node.getNamespace();
 
     // Get the name and the namespace
     if (nodeName !== "schema" || namespaceSchema !== Schema.SCHEMA_NAMESPACE) {
         throw new ValidationException(node.getLine(), "NOT_STXT_SCHEMA", `Expected schema(${Schema.SCHEMA_NAMESPACE}) but got ${nodeName}(${namespaceSchema})`);
     }
+    const root = inline(node);
 
     // Get the description
-    const descrip = node.getChild("description")?.getText();
+    const descrip = root.getChild("description")?.getText();
 
-    const schema = new Schema(node.getValue(), node.getLine(), descrip);
+    const schema = new Schema(root.getValue(), root.getLine(), descrip);
 
     // Used to check that every child is defined
     const allNames = new Set<string>();
 
     // Get the nodes
-    for (const n of node.getChildrenByName("node")) {
+    for (const n of root.getChildrenByName("node")) {
         const schNode = createFrom(n, schema.getNamespace());
         schema.addNodeDefinition(schNode);
-        allNames.add(schNode.getNormalizedName());
+        allNames.add(schNode.getCanonicalName());
     }
 
     // Check that every name is defined
@@ -44,16 +46,7 @@ export function transformNodeToSchema(node: Node): Schema {
         for (const schChild of schNode.getChildren().values()) {
             // Only names of the same namespace are checked
             if (schChild.getNamespace() === schema.getNamespace()) {
-                // Defensive leftover from the Java port: ChildDefinition does expose
-                // getNormalizedName(), so this check can never fail with the current class.
-                const childNorm = (schChild as any).getNormalizedName?.() as string | undefined;
-
-                if (!childNorm) {
-                    throw new RuntimeException(
-                        "CHILD_DEFINITION_API_MISMATCH",
-                        "ChildDefinition.getNormalizedName() is missing in TypeScript version. Add it to ChildDefinition."
-                    );
-                }
+                const childNorm = schChild.getCanonicalName();
 
                 if (!allNames.has(childNorm)) {
                     throw new ValidationException(0, "CHILD_NOT_DEFINED", `Child ${childNorm} not defined in ${schema.getNamespace()}`);
@@ -65,14 +58,23 @@ export function transformNodeToSchema(node: Node): Schema {
     return schema;
 }
 
+/** The schema language is written with inline nodes; anything else is not a schema. */
+function inline(node: Node): InlineNode {
+    if (node instanceof InlineNode) {
+        return node;
+    }
+    throw new ValidationException(node.getLine(), "INVALID_SCHEMA", `Node '${node.getName()}' must be inline in a schema`);
+}
+
 /** Builds the definition of a node from a `Node:` entry of the schema document. */
-function createFrom(n: Node, namespace: string): NodeDefinition {
+function createFrom(node: Node, namespace: string): NodeDefinition {
+    const n = inline(node);
     const name = n.getValue();
 
     let type = "INLINE";
     const typeNode = n.getChild("type");
     if (typeNode) {
-        type = typeNode.getValue();
+        type = typeNode.getText();
     }
     const description = n.getChild("description")?.getText();
 
@@ -84,7 +86,7 @@ function createFrom(n: Node, namespace: string): NodeDefinition {
         if (!TypeRegistry.admitsChildren(type)) {
             throw new ValidationException(children.getLine(), "CHILDREN_NOT_ALLOWED_FOR_TYPE", `Type ${type} does not allow children (node ${name})`);
         }
-        for (const child of children.getChildrenByName("child")) {
+        for (const child of inline(children).getChildrenByName("child")) {
             putChildToSchemaNode(result, child, namespace);
         }
     }
@@ -101,9 +103,9 @@ function createFrom(n: Node, namespace: string): NodeDefinition {
         }
 
         const valuesNode = valuesNodes[0];
-        const values = valuesNode.getChildrenByName("value");
+        const values = inline(valuesNode).getChildrenByName("value");
         for (const v of values) {
-            result.addValue(v.getValue(), v.getLine());
+            result.addValue(v.getText(), v.getLine());
         }
 
         // For the final ENUM check
@@ -119,7 +121,9 @@ function createFrom(n: Node, namespace: string): NodeDefinition {
 }
 
 /** Adds to a node definition the expected child a `Child:` entry declares. */
-function putChildToSchemaNode(schemaNode: NodeDefinition, child: Node, defNamespace: string): void {
+function putChildToSchemaNode(schemaNode: NodeDefinition, childNode: Node, defNamespace: string): void {
+    const child = inline(childNode);
+
     // Get the name and the namespace
     const ns = NameNamespaceParser.parse(child.getValue(), defNamespace, child.getLine(), child.getValue());
     const name = ns.getName();
@@ -138,13 +142,13 @@ function putChildToSchemaNode(schemaNode: NodeDefinition, child: Node, defNamesp
 }
 
 /** Reads an integer child (`Min`, `Max`) of a node, or null when it is not there. */
-function getInteger(node: Node, name: string): number | null {
+function getInteger(node: InlineNode, name: string): number | null {
     const n = node.getChild(name);
     if (!n) {
         return null;
     }
 
-    const raw = n.getValue();
+    const raw = n.getText();
     const parsed = Number.parseInt(raw, 10);
 
     if (Number.isNaN(parsed)) {
