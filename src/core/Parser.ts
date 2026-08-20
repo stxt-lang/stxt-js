@@ -106,6 +106,13 @@ export class Parser {
 			const line: Line = parseLine(lineString, lastNodeText, lastLevel, lineNumber);
 
 			if (line.isComment) {
+				// A comment at the level of an open block node (or shallower) closes the block
+				// (spec 6.1 and 9.1): a block is a literal and cannot be commented from inside.
+				// Only the block closes; the comment does not touch the rest of the hierarchy.
+				if (lastNodeText) {
+					this.closeToLevel(stack, stack.length - 1, result);
+				}
+
 				// Hand it over to the observers
 				this.observers.forEach(observer => {
 					observer.onComment(lineNumber, lineString);

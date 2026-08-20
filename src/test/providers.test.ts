@@ -171,4 +171,13 @@ describe("SchemaProvider contract: null instead of 'not found' exceptions", () =
 		assert.strictEqual(errors.length, 1);
 		assert.strictEqual(errors[0].code, "SCHEMA_NOT_FOUND");
 	});
+
+	it("SchemaValidator never validates the empty namespace, but does validate a namespaced node inside it (STXT-SCHEMA-SPEC 5)", () => {
+		const validator = new SchemaValidator(new SchemaProviderMemory(), true);
+
+		assert.deepStrictEqual(validator.validate(new Parser().parse("Doc: x\n\tChild: y\n")[0]), []);
+
+		const errors = validator.validate(new Parser().parse("Doc: x\n\tFree: y\n\tBound (com.example.unknown): z\n")[0]);
+		assert.deepStrictEqual(errors.map(e => [e.code, e.line]), [["SCHEMA_NOT_FOUND", 3]]);
+	});
 });

@@ -38,6 +38,19 @@ export class SchemaValidator implements Validator {
 
         // Get the namespace
         const namespace = node.getNamespace();
+        // The empty namespace is never validated (STXT-SCHEMA-SPEC 5): a node that neither
+        // declares nor inherits a namespace is valid by definition, no schema is looked up for
+        // it and SCHEMA_NOT_FOUND is never reported for it. Its children are still walked when
+        // recursive, because one of them may declare a namespace of its own.
+        if (namespace === "") {
+            if (this.recursiveValidation && node instanceof InlineNode) {
+                for (const childNode of node.getChildren()) {
+                    errors.push(...this.validate(childNode));
+                }
+            }
+            return errors;
+        }
+
         const schema = this.schemaProvider.getSchema(namespace);
 
         if (!schema) {

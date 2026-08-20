@@ -1,8 +1,10 @@
 /** String normalization helpers used for names, namespaces and values. */
 export class StringUtils {
-	// STXT-SPEC 4.2 / 4.3: validate the logical name after NFC so that a
+	// STXT-SPEC 4.2 / 4.3: letters, decimal digits, combining marks (Mn, Mc) and the three
+	// separators, with at least one letter or digit. Validated after NFC so that a
 	// decomposed spelling such as "e" + combining acute is accepted as "é".
-	private static readonly NODE_NAME = /^[\p{L}\p{Nd}\-_ ]+$/u;
+	private static readonly NODE_NAME = /^[\p{L}\p{Nd}\p{Mn}\p{Mc}\-_ ]+$/u;
+	private static readonly NODE_NAME_LETTER_OR_DIGIT = /[\p{L}\p{Nd}]/u;
 
 	private constructor() {
 	}
@@ -68,7 +70,7 @@ export class StringUtils {
 	 */
 	static isValidNodeName(input: string | null | undefined): boolean {
 		const nfc = this.compactSpaces(input).normalize("NFC");
-		return this.NODE_NAME.test(nfc) && this.normalize(nfc).length > 0;
+		return this.NODE_NAME.test(nfc) && this.NODE_NAME_LETTER_OR_DIGIT.test(nfc);
 	}
 
 	// Used for the normalized name of the nodes (STXT-SPEC 4.3): NFC + lower case,

@@ -6,6 +6,10 @@ import { ValidationException } from "../exceptions/ValidationException";
 /**
  * Wrapper around a {@link SchemaValidator} that only validates namespaced nodes, so that a
  * document mixing schema-bound and free nodes does not report the free ones as unknown.
+ *
+ * @deprecated since 0.8.0: {@link SchemaValidator} applies this rule itself (STXT-SCHEMA-SPEC 5,
+ * the empty namespace is never validated), so the wrapper adds nothing. Register the
+ * `SchemaValidator` directly. Kept for compatibility; to be removed in 1.0.
  */
 export class ConditionalValidator implements Validator {
     private readonly schemaValidator: SchemaValidator;
