@@ -22,6 +22,12 @@ PROVIDER.addSchema([
 	"\t\tType: TIMESTAMP",
 	"\tNode: NUMBER",
 	"\t\tType: NUMBER",
+	"\tNode: HEXADECIMAL",
+	"\t\tType: HEXADECIMAL",
+	"\tNode: BINARY",
+	"\t\tType: BINARY",
+	"\tNode: BASE64",
+	"\t\tType: BASE64",
 	"",
 ].join("\n"));
 
@@ -141,5 +147,64 @@ describe("EMAIL type", () => {
 	it("rejects the block form", () => {
 		const node = new Parser().parse("EMAIL (com.example.types) >>\n\tana@example.com\n")[0];
 		assert.deepStrictEqual(new SchemaValidator(PROVIDER, true).validate(node).map(e => e.code), ["BLOCK_FORM_NOT_ALLOWED"]);
+	});
+});
+
+// STXT-SCHEMA-SPEC 9.5 (0.10.0): every blank is removed before applying the grammar of the
+// binary types, in both forms; nothing else is, and an empty value is invalid.
+describe("Binary types: blanks are removed wherever they are", () => {
+	function blockCodes(type: string, lines: string[]): string[] {
+		const node = new Parser().parse(`${type} (com.example.types) >>\n${lines.map(l => `\t${l}`).join("\n")}\n`)[0];
+		return new SchemaValidator(PROVIDER, true).validate(node).map(e => e.code);
+	}
+
+	const GOOD: [string, string][] = [
+		["HEXADECIMAL", "DE AD BE EF"],
+		["HEXADECIMAL", "DE\tAD"],
+		["HEXADECIMAL", "D E\t A D"],
+		["BINARY", "1010 1010"],
+		["BASE64", "SG Vs bG 8="],
+		["BASE64", "SGVsbG8"],
+		["BASE64", "SGVsbA"],
+		["BASE64", "SGVsbA=="],
+	];
+	const BAD: [string, string][] = [
+		["HEXADECIMAL", "DE:AD"],
+		["HEXADECIMAL", "DE-AD"],
+		["HEXADECIMAL", ""],
+		["HEXADECIMAL", " \t "],
+		["BINARY", "1010-1010"],
+		["BINARY", ""],
+		["BASE64", "SG:Vs"],
+		["BASE64", "SG-Vs"],
+		["BASE64", "SGVsbG8_"],
+		["BASE64", "SGV"],
+		["BASE64", "SGVsbB"],
+		["BASE64", "SGVsbG8=="],
+		["BASE64", "SG=V"],
+		["BASE64", "="],
+		["BASE64", ""],
+	];
+	GOOD.forEach(([type, value]) => it(`${type} accepts ${JSON.stringify(value)}`, () => {
+		assert.deepStrictEqual(codes(type, value), []);
+	}));
+	BAD.forEach(([type, value]) => it(`${type} rejects ${JSON.stringify(value)}`, () => {
+		assert.deepStrictEqual(codes(type, value), ["INVALID_VALUE"]);
+	}));
+
+	it("BASE64 accepts a block wrapped at 76 columns with blanks around and inside each line", () => {
+		const text = Buffer.from("x".repeat(200)).toString("base64");
+		const lines: string[] = [];
+		for (let i = 0; i < text.length; i += 76) {
+			lines.push(`  ${text.substring(i, i + 76).replace(/(.{4})/g, "$1 ")}\t`);
+		}
+		lines.splice(1, 0, "");
+		assert.deepStrictEqual(blockCodes("BASE64", lines), []);
+	});
+
+	it("HEXADECIMAL block joins the lines and drops the blanks", () => {
+		assert.deepStrictEqual(blockCodes("HEXADECIMAL", ["DE AD", "", "\tBE EF  "]), []);
+		assert.deepStrictEqual(blockCodes("HEXADECIMAL", ["DE:AD", "BEEF"]), ["INVALID_VALUE"]);
+		assert.deepStrictEqual(blockCodes("HEXADECIMAL", ["", "  "]), ["INVALID_VALUE"]);
 	});
 });

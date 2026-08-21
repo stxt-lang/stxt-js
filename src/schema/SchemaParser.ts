@@ -116,6 +116,11 @@ function createFrom(node: Node, namespace: string): NodeDefinition {
         const valuesNode = valuesNodes[0];
         const values = inline(valuesNode).getChildrenByName("value");
         for (const v of values) {
+            // An empty Value: is a schema error (STXT-SCHEMA-SPEC 7.2, condition 14 of section 13):
+            // an enumeration whose only valid value is the empty string makes no sense
+            if (v.getText().length === 0) {
+                throw new ValidationException(v.getLine(), "VALUE_EMPTY", "Value of ENUM cannot be empty");
+            }
             result.addValue(v.getText(), v.getLine());
         }
 

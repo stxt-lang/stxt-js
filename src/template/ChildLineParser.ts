@@ -80,6 +80,12 @@ export class ChildLineParser {
 
             for (let part of parts) {
                 part = part.trim();
+                // An empty item ("[a, , b]", "[a, b,]") is an error, as an empty Value: is in a
+                // schema (STXT-TEMPLATE-SPEC 14.14). Only the whole list may be empty ("[]"),
+                // which the template parser reports as VALUES_REQUIRED.
+                if (part.length === 0 && parts.length > 1) {
+                    throw new ValidationException(lineNumber, "VALUE_EMPTY", `Empty ENUM value in ${valuesStr}`);
+                }
                 if (part.length === 0) {
                     continue;
                 }

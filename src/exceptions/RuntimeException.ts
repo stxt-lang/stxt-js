@@ -26,9 +26,13 @@ export class RuntimeException extends Error {
 		return this.code;
 	}
 
-	/** @returns a readable representation of the error, with its code. */
+	/**
+	 * The string form carries the frame that `message` deliberately leaves out; same framing in
+	 * every port since 0.10.0.
+	 *
+	 * @returns `[CODE] message`.
+	 */
 	toString(): string {
-		const message = this.message;
-		return `${this.name}[${this.code}]${message ? `: ${message}` : ""}`;
+		return `[${this.code}] ${this.message}`;
 	}
 }

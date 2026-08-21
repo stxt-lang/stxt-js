@@ -25,8 +25,14 @@ export class ParseException extends Error {
 		Object.setPrototypeOf(this, ParseException.prototype);
 	}
 
-	/** @returns a readable representation of the error, with its line and its code. */
+	/**
+	 * The string form carries the frame that `message` deliberately leaves out: `message` is only
+	 * the description, and the code and the line are separate fields that whoever formats output
+	 * composes. Same framing in every port since 0.10.0.
+	 *
+	 * @returns `[CODE] line N: message`.
+	 */
 	toString(): string {
-		return `${this.name} [line=${this.line}, code=${this.code}]: ${this.message}`;
+		return `[${this.code}] line ${this.line}: ${this.message}`;
 	}
 }

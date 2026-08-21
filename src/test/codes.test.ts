@@ -8,6 +8,10 @@ import { SchemaValidator } from "../schema/SchemaValidator";
 import { transformNodeToSchema } from "../schema/SchemaParser";
 import { transformTemplateNodeToSchema } from "../template/TemplateParser";
 import { TemplateSchemaProviderMemory } from "../template/TemplateSchemaProviderMemory";
+import { RuntimeException } from "../exceptions/RuntimeException";
+import { Constants } from "../core/Constants";
+import { SPEC_VERSION } from "../all";
+import * as all from "../all";
 
 /**
  * Error codes introduced or split in 0.9.1 (normative annexes STXT-SPEC 11.1, STXT-SCHEMA-SPEC 13.1
@@ -163,6 +167,73 @@ describe("Template load codes", () => {
 	it("TEMPLATE_MULTIPLE_ROOTS when the document does not hold exactly one root", () => {
 		const one = "Template (@stxt.template): com.example.t\n\tStructure >>\n\t\tRoot (1)\n";
 		assert.strictEqual(validationCode(() => new TemplateSchemaProviderMemory().addTemplate(one + one)).code, "TEMPLATE_MULTIPLE_ROOTS");
+	});
+});
+
+describe("VALUE_EMPTY: an empty ENUM value (0.10.0)", () => {
+	it("schema: an empty Value: fails at the line of that Value", () => {
+		const doc = [
+			"Schema (@stxt.schema): com.example.s",
+			"\tNode: Root",
+			"\t\tType: ENUM",
+			"\t\tValues:",
+			"\t\t\tValue: x",
+			"\t\t\tValue:",
+			"",
+		].join("\n");
+		const e = validationCode(() => transformNodeToSchema(root(doc)));
+		assert.strictEqual(e.code, "VALUE_EMPTY");
+		assert.strictEqual(e.line, 6);
+		assert.strictEqual(e.validation, true);
+	});
+
+	["[a, , b]", "[a, b,]", "[, a]", "[ , ]"].forEach(list => it(`template: ${list} fails at the line of the Structure line`, () => {
+		const doc = `Template (@stxt.template): com.example.t\n\tStructure >>\n\t\tRoot:\n\t\t\tField: (1) ENUM ${list}\n`;
+		const e = validationCode(() => transformTemplateNodeToSchema(root(doc)));
+		assert.strictEqual(e.code, "VALUE_EMPTY");
+		assert.strictEqual(e.line, 4);
+		assert.strictEqual(e.validation, true);
+	}));
+
+	["[]", "[ ]"].forEach(list => it(`template: a whole empty list ${list} stays VALUES_REQUIRED`, () => {
+		const doc = `Template (@stxt.template): com.example.t\n\tStructure >>\n\t\tRoot:\n\t\t\tField: (1) ENUM ${list}\n`;
+		assert.strictEqual(validationCode(() => transformTemplateNodeToSchema(root(doc))).code, "VALUES_REQUIRED");
+	}));
+});
+
+describe("Message framing (0.10.0)", () => {
+	it("message is only the description; toString adds the code and the line", () => {
+		const e = validationCode(() => new Parser().parse("Root:\n\t\tChild: x\n"));
+		assert.strictEqual(e.code, "INDENTATION_LEVEL_NOT_VALID");
+		try {
+			new Parser().parse("Root:\n\t\tChild: x\n");
+			assert.fail("expected a ParseException");
+		} catch (err: unknown) {
+			const pe = err as ParseException;
+			assert.strictEqual(pe.message, "Level of indent incorrect: 2");
+			assert.strictEqual(pe.toString(), "[INDENTATION_LEVEL_NOT_VALID] line 2: Level of indent incorrect: 2");
+			assert.strictEqual(String(pe), pe.toString());
+		}
+	});
+
+	it("ValidationException uses the same frame", () => {
+		const e = new ValidationException(7, "SOME_CODE", "Some description");
+		assert.strictEqual(e.message, "Some description");
+		assert.strictEqual(e.toString(), "[SOME_CODE] line 7: Some description");
+	});
+
+	it("RuntimeException prints [CODE] message", () => {
+		const e = new RuntimeException("SOME_CODE", "Some description");
+		assert.strictEqual(e.message, "Some description");
+		assert.strictEqual(e.toString(), "[SOME_CODE] Some description");
+	});
+});
+
+describe("SPEC_VERSION", () => {
+	it("is exported from the package entry point and equals Constants.SPEC_VERSION", () => {
+		assert.strictEqual(SPEC_VERSION, "1.0");
+		assert.strictEqual(Constants.SPEC_VERSION, SPEC_VERSION);
+		assert.strictEqual(all.SPEC_VERSION, "1.0");
 	});
 });
 
