@@ -89,5 +89,6 @@ export function parseLine(line: string, lastNodeBlock: boolean, lastLevel: numbe
 	}
 
 	// General case: return the line without the indentation already consumed
-	return new Line(level, line.substring(pointer).trim(), false, false, pointer);
+	// Blank-only trim (spec 4): an NBSP after the value is part of it
+	return new Line(level, StringUtils.trim(line.substring(pointer)), false, false, pointer);
 }

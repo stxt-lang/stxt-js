@@ -61,3 +61,28 @@ describe("Core conformance regressions", () => {
 		assert.deepStrictEqual(events, ["create A", "create T", "text", "finish T", "comment 4", "create B", "finish B", "finish A"]);
 	});
 });
+
+describe("Blanks are only U+0020 and U+0009 (STXT-SPEC 4)", () => {
+	const codes = (text: string) => new Parser().parseResult(text).getErrors().map((e) => e.code);
+
+	it("keeps an NBSP as part of an inline value and of block lines", () => {
+		const root = new Parser().parse("Root:\n\tTrailing: Joan \n\tLeading: Joan\n\tOnly: \n\tBlock >>\n\t\tfirst \n\t\t \n\t\tin the middle\n")[0] as InlineNode;
+		const [trailing, leading, only, block] = root.getChildren();
+		assert.strictEqual((trailing as InlineNode).getValue(), "Joan ");
+		assert.strictEqual((leading as InlineNode).getValue(), " Joan");
+		assert.strictEqual((only as InlineNode).getValue(), " ");
+		assert.deepStrictEqual([...(block as TextNode).getTextLines()], ["first ", " ", "in the middle"]);
+	});
+
+	it("does not treat a line holding only an NBSP as empty, nor one after >>", () => {
+		assert.deepStrictEqual(codes(" \n"), ["INVALID_LINE"]);
+		assert.deepStrictEqual(codes("Block >> \n"), ["INLINE_VALUE_NOT_VALID"]);
+		assert.deepStrictEqual(codes("Root: x\n \t\n\n"), []);
+	});
+
+	it("does not trim an NBSP from a name, which makes the name invalid", () => {
+		assert.deepStrictEqual(codes("Name : x\n"), ["INVALID_NODE_NAME"]);
+		assert.deepStrictEqual(codes("A B: x\n"), ["INVALID_NODE_NAME"]);
+		assert.strictEqual(new Parser().parse("Name \t: x\n")[0].getName(), "Name");
+	});
+});

@@ -64,7 +64,7 @@ export class InlineNode extends Node {
 	 * @param value new value, or null/undefined for none. It is trimmed.
 	 */
 	setValue(value: string | null | undefined): void {
-		this.value = (value ?? "").trim();
+		this.value = StringUtils.trim(value);
 	}
 
 	getText(): string {

@@ -1,3 +1,4 @@
+import { StringUtils } from "./StringUtils";
 /**
  * A source line already split into its indentation and its content, as produced by
  * {@link parseLine}. It is what tells the {@link Parser} whether the line opens a node, continues
@@ -33,9 +34,9 @@ export class Line {
 		this.indentLength = indentLength;
 
 	}
-	/** @returns true if the line has no content beyond whitespace. */
+	/** @returns true if the line has no content beyond blanks (space/tab only, spec 4). */
 	isEmpty(): boolean {
-		return this.content.trim() === "";
+		return StringUtils.trim(this.content) === "";
 	}
 }
 

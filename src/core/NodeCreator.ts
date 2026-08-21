@@ -1,3 +1,4 @@
+import { StringUtils } from "./StringUtils";
 import { Line } from "./Line";
 import { NameNamespaceParser } from "./NameNamespaceParser";
 import { Node } from "./Node";
@@ -47,7 +48,7 @@ export function createNode(lineIndent: Line, lineNumber: number): Node {
         value = line.substring(nodeIndex + Constants.SEP_NODE.length);
     }
 
-    if (textNode && value.trim().length > 0) {
+    if (textNode && StringUtils.trim(value).length > 0) {
         throw new ParseException(lineNumber, "INLINE_VALUE_NOT_VALID", `Line not valid: ${line}`);
     }
 

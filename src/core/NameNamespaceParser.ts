@@ -1,5 +1,6 @@
 import { ParseException } from "../exceptions/ParseException";
 import { NameNamespace } from "./NameNamespace";
+import { StringUtils } from "./StringUtils";
 
 /** Extracts the name and the namespace `(a.b.c)` from the left-hand side of an STXT line. */
 export class NameNamespaceParser {
@@ -21,7 +22,7 @@ export class NameNamespaceParser {
 			throw new ParseException(lineNumber, "INVALID_LINE", `Line not valid: ${fullLine}`);
 		}
 
-		rawName = rawName.trim();
+		rawName = StringUtils.trim(rawName);
 
 		const startIndex = rawName.indexOf("(");
 		const endIndex = rawName.indexOf(")");
@@ -35,7 +36,7 @@ export class NameNamespaceParser {
 				throw new ParseException(lineNumber, "INVALID_NAMESPACE", `Line not valid: ${fullLine}`);
 			}
 
-			name = rawName.substring(0, startIndex).trim();
+			name = StringUtils.trim(rawName.substring(0, startIndex));
 			// No trim: the grammar (STXT-SPEC 7/16) does not allow spaces inside '( )'
 			namespace = rawName.substring(startIndex + 1, endIndex);
 

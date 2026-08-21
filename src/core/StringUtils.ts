@@ -6,23 +6,45 @@ export class StringUtils {
 	private static readonly NODE_NAME = /^[\p{L}\p{Nd}\p{Mn}\p{Mc}\-_ ]+$/u;
 	private static readonly NODE_NAME_LETTER_OR_DIGIT = /[\p{L}\p{Nd}]/u;
 
+	// STXT-SPEC 4: a blank is exactly U+0020 or U+0009. Every trim in the core works on
+	// these two characters only; String.prototype.trim and /\s/ are deliberately avoided
+	// because they also remove NBSP, U+3000, U+2028... which STXT treats as content.
+	private static readonly LEADING_BLANKS = /^[ \t]+/;
+	private static readonly TRAILING_BLANKS = /[ \t]+$/;
+	private static readonly BLANK_RUN = /[ \t]+/g;
+
 	private constructor() {
+	}
+
+	/**
+	 * Tells whether a character is an STXT blank (STXT-SPEC 4): space or tab.
+	 *
+	 * @param c single character.
+	 * @returns true for U+0020 and U+0009 only.
+	 */
+	static isBlank(c: string): boolean {
+		return c === " " || c === "\t";
+	}
+
+	/**
+	 * Removes the leading and trailing blanks (space and tab only, STXT-SPEC 4) of a string.
+	 *
+	 * @param s string to trim.
+	 * @returns the trimmed string; null/undefined is treated as the empty string.
+	 */
+	static trim(s: string | null | undefined): string {
+		return (s ?? "").replace(this.LEADING_BLANKS, "").replace(this.TRAILING_BLANKS, "");
 	}
 
 	// Used for name>> nodes
 	/**
-	 * Removes the trailing whitespace of a string.
+	 * Removes the trailing blanks (space and tab only, STXT-SPEC 4, 10.2) of a string.
 	 *
-	 * @param s string to strip the trailing spaces from.
-	 * @returns the string without trailing whitespace; null/undefined is treated as the empty string.
+	 * @param s string to strip the trailing blanks from.
+	 * @returns the string without trailing blanks; null/undefined is treated as the empty string.
 	 */
 	static rightTrim(s: string | null | undefined): string {
-		const value = s ?? "";
-		let i = value.length - 1;
-		while (i >= 0 && /\s/.test(value.charAt(i))) {
-			i--;
-		}
-		return value.substring(0, i + 1);
+		return (s ?? "").replace(this.TRAILING_BLANKS, "");
 	}
 
 	// Used for BASE64 and HEXADECIMAL nodes
@@ -50,13 +72,13 @@ export class StringUtils {
 
 	// Used for the name of the nodes
 	/**
-	 * Trims a string and collapses its inner whitespace.
+	 * Trims a string and collapses its inner runs of blanks (space and tab only).
 	 *
 	 * @param s string to compact.
-	 * @returns the string with the outer spaces trimmed and the inner ones collapsed into a single one; null/undefined is treated as the empty string.
+	 * @returns the string with the outer blanks trimmed and the inner runs collapsed into a single space; null/undefined is treated as the empty string.
 	 */
 	static compactSpaces(s: string | null | undefined): string {
-		return (s ?? "").trim().replace(/\s+/g, " ");
+		return this.trim(s).replace(this.BLANK_RUN, " ");
 	}
 
 	/**
@@ -82,7 +104,7 @@ export class StringUtils {
 	 * @returns the canonical name of a node: NFC + lower case, with separators collapsed into '-'; null/undefined is treated as the empty string.
 	 */
 	static normalize(input: string | null | undefined): string {
-		let s = (input ?? "").trim();
+		let s = this.trim(input);
 		if (s.length === 0) {
 			return "";
 		}
@@ -90,8 +112,8 @@ export class StringUtils {
 		s = s.normalize("NFC");
 		s = s.toLowerCase();
 
-		// every run of separators ('-', '_', spaces) => a single '-'
-		s = s.replace(/[-_\s]+/g, "-");
+		// every run of separators ('-', '_', blanks) => a single '-'
+		s = s.replace(/[-_ \t]+/g, "-");
 
 		// trim the '-'
 		s = s.replace(/^-+|-+$/g, "");
