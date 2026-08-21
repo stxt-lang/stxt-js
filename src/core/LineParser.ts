@@ -20,7 +20,7 @@ import { Line } from "./Line";
  * @param numLine line number, for the error messages.
  * @param validate false to split the line without enforcing the indentation rules.
  * @returns the line already split into indentation and content.
- * @throws ParseException with code `MIXED_INDENTATION`, `INVALID_NUMBER_SPACES` or
+ * @throws ParseException with code `INDENTATION_MIXED`, `INDENTATION_SPACES_NOT_VALID` or
  *         `INDENTATION_LEVEL_NOT_VALID` if the indentation is not valid.
  */
 export function parseLine(line: string, lastNodeBlock: boolean, lastLevel: number, numLine: number, validate: boolean = true): Line {
@@ -64,7 +64,7 @@ export function parseLine(line: string, lastNodeBlock: boolean, lastLevel: numbe
 			// The prefix covering the block level must be homogeneous (spec 10.2, rule 2);
 			// empty lines are always preserved and are exempt from it (spec 10.3)
 			if (validate && sawSpace && sawTab && text.length > 0) {
-				throw new ParseException(numLine, "MIXED_INDENTATION", `Mixed tabs and spaces in indentation`);
+				throw new ParseException(numLine, "INDENTATION_MIXED", `Mixed tabs and spaces in indentation`);
 			}
 			return new Line(level, text, false, true, pointer);
 		}
@@ -85,12 +85,12 @@ export function parseLine(line: string, lastNodeBlock: boolean, lastLevel: numbe
 
 	// Tabs and spaces mixed in the indentation (spec 8.1 and 8.3)
 	if (validate && sawSpace && sawTab) {
-		throw new ParseException(numLine, "MIXED_INDENTATION", `Mixed tabs and spaces in indentation`);
+		throw new ParseException(numLine, "INDENTATION_MIXED", `Mixed tabs and spaces in indentation`);
 	}
 
 	// Indentation with spaces that is not a multiple of 4
 	if (validate && spaces > 0) {
-		throw new ParseException(numLine, "INVALID_NUMBER_SPACES", `There are ${spaces} spaces before node`);
+		throw new ParseException(numLine, "INDENTATION_SPACES_NOT_VALID", `There are ${spaces} spaces before node`);
 	}
 
 	// Validate the level (spec 11.3). Comments included (spec 9): lastLevel is the level of the

@@ -35,16 +35,17 @@ export class TemplateSchemaProviderMemory extends SchemaProviderMemory {
      * schema it produces.
      *
      * @param template text of the `@stxt.template` document.
-     * @throws ValidationException with code `INVALID_SCHEMA` if the document does not hold exactly
-     *         one template or the resulting schema has no namespace, or the first validation error
-     *         if the template does not validate against the template meta-schema.
+     * @throws ValidationException with code `TEMPLATE_MULTIPLE_ROOTS` if the document does not hold
+     *         exactly one root node, `TEMPLATE_ROOT_NOT_VALID` or `TEMPLATE_NAMESPACE_EMPTY` if that
+     *         root is not `Template (@stxt.template): ns`, or the first validation error if the
+     *         template does not validate against the template meta-schema.
      */
     addTemplate(template: string): void {
         const parser = new Parser();
 
         const nodes: Node[] = parser.parse(template);
         if (nodes.length !== 1) {
-            throw new ValidationException(0, "INVALID_SCHEMA", `There are ${nodes.length}, and expected is 1`);
+            throw new ValidationException(0, "TEMPLATE_MULTIPLE_ROOTS", `A template document must hold exactly 1 root node, got ${nodes.length}`);
         }
 
         // A template that does not validate against the template meta-schema must not
@@ -57,11 +58,6 @@ export class TemplateSchemaProviderMemory extends SchemaProviderMemory {
 
         // Build the schema out of the template
         const sch = transformTemplateNodeToSchema(nodes[0]);
-
-        // Minimum safety check (Java checked the expected namespace here too)
-        if (!sch.getNamespace() || sch.getNamespace().trim().length === 0) {
-            throw new ValidationException(0, "INVALID_SCHEMA", "Schema namespace is empty");
-        }
 
         this.schemas.set(sch.getNamespace(), sch);
     }

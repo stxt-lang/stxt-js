@@ -80,7 +80,7 @@ export class TypeRegistry {
         const name = instance.getName();
 
         if (this.REGISTRY.has(name)) {
-            throw new RuntimeException("DUPLICATED_TYPE", `Type already defined: ${name}`);
+            throw new RuntimeException("TYPE_DUPLICATED", `Type already defined: ${name}`);
         }
 
         this.REGISTRY.set(name, instance);

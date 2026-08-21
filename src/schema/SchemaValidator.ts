@@ -84,7 +84,7 @@ export class SchemaValidator implements Validator {
 
         if (!schemaNode) {
             const error = `NOT EXIST NODE ${node.getCanonicalName()} for namespace ${schema.getNamespace()}`;
-            errors.push(new ValidationException(node.getLine(), "NODE_NOT_EXIST_IN_SCHEMA", error));
+            errors.push(new ValidationException(node.getLine(), "NODE_NOT_DEFINED_IN_SCHEMA", error));
             return errors;
         }
 
@@ -120,7 +120,7 @@ export class SchemaValidator implements Validator {
 
         const validator: Type | undefined = TypeRegistry.get(nodeType);
         if (!validator) {
-            errors.push(new ValidationException(node.getLine(),"TYPE_NOT_SUPPORTED",`Node type not supported: ${nodeType}`));
+            errors.push(new ValidationException(node.getLine(),"TYPE_NOT_VALID",`Node type not supported: ${nodeType}`));
             return errors;
         }
 
@@ -130,9 +130,9 @@ export class SchemaValidator implements Validator {
             if (e instanceof ValidationException) {
                 errors.push(e);
             } else if (e instanceof Error) {
-                errors.push(new ValidationException(node.getLine(),"VALIDATION_ERROR", e.message));
+                errors.push(new ValidationException(node.getLine(),"UNEXPECTED_ERROR", e.message));
             } else {
-                errors.push(new ValidationException(node.getLine(),"UNKNOWN_VALIDATION_ERROR", String(e)));
+                errors.push(new ValidationException(node.getLine(),"UNEXPECTED_ERROR", String(e)));
             }
         }
 
@@ -173,18 +173,18 @@ export class SchemaValidator implements Validator {
         const max = childDef.getMax(); // number | null
 
         if (min !== null && childCount < min) {
-            errors.push(new ValidationException(node.getLine(),"INVALID_NUMBER",`${childCount} nodes of '${childDef.getQualifiedName()}' and min is ${min}`));
+            errors.push(new ValidationException(node.getLine(),"TOO_FEW_CHILDREN",`${childCount} nodes of '${childDef.getQualifiedName()}' and min is ${min}`));
         }
 
         if (max !== null && childCount > max) {
             // Error on the parent
-            errors.push(new ValidationException(node.getLine(),"INVALID_NUMBER",`${childCount} nodes of '${childDef.getQualifiedName()}' and max is ${max}`));
+            errors.push(new ValidationException(node.getLine(),"TOO_MANY_CHILDREN",`${childCount} nodes of '${childDef.getQualifiedName()}' and max is ${max}`));
 
             // Error on each child node beyond the allowed maximum
             for (const child of children) {
                 errors.push(new ValidationException(
                     child.getLine(),
-                    "INVALID_NUMBER",
+                    "TOO_MANY_CHILDREN",
                     `Too many '${childDef.getQualifiedName()}' nodes: found ${childCount}, max is ${max}`
                 ));
             }

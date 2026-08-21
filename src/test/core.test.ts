@@ -49,8 +49,8 @@ describe("Core conformance regressions", () => {
 
 	it("validates the indentation of a comment like a node's (spec 9 and 11, 0.9.0)", () => {
 		const errors = (text: string) => new Parser().parseResult(text).getErrors().map(e => [e.code, e.line]);
-		assert.deepStrictEqual(errors("Root:\n\t # mixed\n\tChild: x\n"), [["MIXED_INDENTATION", 2]]);
-		assert.deepStrictEqual(errors("Root:\n   # three spaces\n\tChild: x\n"), [["INVALID_NUMBER_SPACES", 2]]);
+		assert.deepStrictEqual(errors("Root:\n\t # mixed\n\tChild: x\n"), [["INDENTATION_MIXED", 2]]);
+		assert.deepStrictEqual(errors("Root:\n   # three spaces\n\tChild: x\n"), [["INDENTATION_SPACES_NOT_VALID", 2]]);
 		assert.deepStrictEqual(errors("Root:\n\t\t# too deep\n\tChild: x\n"), [["INDENTATION_LEVEL_NOT_VALID", 2]]);
 	});
 
@@ -97,7 +97,7 @@ describe("Blanks are only U+0020 and U+0009 (STXT-SPEC 4)", () => {
 
 	it("does not treat a line holding only an NBSP as empty, nor one after >>", () => {
 		assert.deepStrictEqual(codes(" \n"), ["INVALID_LINE"]);
-		assert.deepStrictEqual(codes("Block >> \n"), ["INLINE_VALUE_NOT_VALID"]);
+		assert.deepStrictEqual(codes("Block >> \n"), ["BLOCK_VALUE_NOT_ALLOWED"]);
 		assert.deepStrictEqual(codes("Root: x\n \t\n\n"), []);
 	});
 

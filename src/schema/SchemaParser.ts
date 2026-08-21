@@ -4,7 +4,8 @@ import { ChildDefinition } from "./ChildDefinition";
 import { Node } from "../core/Node";
 import { InlineNode } from "../core/InlineNode";
 import { ValidationException } from "../exceptions/ValidationException";
-import { RuntimeException } from "../exceptions/RuntimeException";
+import { NamespaceValidator } from "../core/NamespaceValidator";
+import { StringUtils } from "../core/StringUtils";
 import { NameNamespaceParser } from "../core/NameNamespaceParser";
 import { TypeRegistry } from "./TypeRegistry";
 
@@ -13,7 +14,8 @@ import { TypeRegistry } from "./TypeRegistry";
  *
  * @param node root node of the schema document, `Schema (@stxt.schema): ...`.
  * @returns the schema the document defines.
- * @throws ValidationException if the document is not a valid `@stxt.schema` one.
+ * @throws ValidationException with `SCHEMA_ROOT_NOT_VALID`, `SCHEMA_NAMESPACE_EMPTY`, `SCHEMA_NODE_NOT_INLINE`
+ *         or the code of the first rule of the schema language the document breaks, if the document is not a valid `@stxt.schema` one.
  */
 export function transformNodeToSchema(node: Node): Schema {
     // Node name
@@ -22,14 +24,23 @@ export function transformNodeToSchema(node: Node): Schema {
 
     // Get the name and the namespace
     if (nodeName !== "schema" || namespaceSchema !== Schema.SCHEMA_NAMESPACE) {
-        throw new ValidationException(node.getLine(), "NOT_STXT_SCHEMA", `Expected schema(${Schema.SCHEMA_NAMESPACE}) but got ${nodeName}(${namespaceSchema})`);
+        throw new ValidationException(node.getLine(), "SCHEMA_ROOT_NOT_VALID", `Expected schema(${Schema.SCHEMA_NAMESPACE}) but got ${nodeName}(${namespaceSchema})`);
     }
     const root = inline(node);
+
+    // The target namespace: required, and with a valid format
+    const targetNamespace = StringUtils.lowerCase(root.getValue());
+    if (!targetNamespace || targetNamespace.trim().length === 0) {
+        throw new ValidationException(root.getLine(), "SCHEMA_NAMESPACE_EMPTY", "Schema namespace is empty");
+    }
+    if (!NamespaceValidator.isValid(targetNamespace)) {
+        throw new ValidationException(root.getLine(), "SCHEMA_ROOT_NOT_VALID", `Schema namespace not valid: ${targetNamespace}`);
+    }
 
     // Get the description
     const descrip = root.getChild("description")?.getText();
 
-    const schema = new Schema(root.getValue(), root.getLine(), descrip);
+    const schema = new Schema(targetNamespace, root.getLine(), descrip);
 
     // Used to check that every child is defined
     const allNames = new Set<string>();
@@ -63,7 +74,7 @@ function inline(node: Node): InlineNode {
     if (node instanceof InlineNode) {
         return node;
     }
-    throw new ValidationException(node.getLine(), "INVALID_SCHEMA", `Node '${node.getName()}' must be inline in a schema`);
+    throw new ValidationException(node.getLine(), "SCHEMA_NODE_NOT_INLINE", `Node '${node.getName()}' must be inline in a schema`);
 }
 
 /** Builds the definition of a node from a `Node:` entry of the schema document. */
@@ -95,11 +106,11 @@ function createFrom(node: Node, namespace: string): NodeDefinition {
     let valuesNodes = n.getChildrenByName("values");
     if (valuesNodes && valuesNodes.length > 0) {
         if (type !== "ENUM") {
-            throw new ValidationException(n.getLine(), "VALUES_ONLY_SUPPORTED_BY_ENUM", `Values only supported for type ENUM, not for type ${type}`);
+            throw new ValidationException(n.getLine(), "VALUES_NOT_ALLOWED_FOR_TYPE", `Values only supported for type ENUM, not for type ${type}`);
         }
 
         if (valuesNodes.length > 1) {
-            throw new RuntimeException("INVALID_SIZE_VALUES", `Unexpected number of values: ${valuesNodes.length}`);
+            throw new ValidationException(valuesNodes[1].getLine(), "VALUES_DUPLICATED", `Node '${n.getValue()}' defines 'Values' ${valuesNodes.length} times`);
         }
 
         const valuesNode = valuesNodes[0];
@@ -114,7 +125,7 @@ function createFrom(node: Node, namespace: string): NodeDefinition {
 
     // Look at the enum
     if (type === "ENUM" && (!valuesNodes || valuesNodes.length === 0)) {
-        throw new ValidationException(n.getLine(), "VALUES_EMPTY_FOR_ENUM", "ENUM Type must include values");
+        throw new ValidationException(n.getLine(), "VALUES_REQUIRED", "ENUM Type must include values");
     }
 
     return result;
@@ -152,7 +163,7 @@ function getInteger(node: InlineNode, name: string): number | null {
     const parsed = Number.parseInt(raw, 10);
 
     if (Number.isNaN(parsed)) {
-        throw new ValidationException(node.getLine(), "INVALID_INTEGER", `Integer not valid: ${raw}`);
+        throw new ValidationException(node.getLine(), "CARDINALITY_NOT_VALID", `Integer not valid: ${raw}`);
     }
 
     return parsed;

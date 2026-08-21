@@ -14,7 +14,7 @@ export class ChildLineParser {
      * @param rawLine inline value of the node, `(min,max) TYPE [values]`.
      * @param lineNumber line number, for the error messages.
      * @returns the line already split into type, cardinality and values.
-     * @throws ValidationException with code `INVALID_CHILD_LINE`, `INVALID_CHILD_COUNT`,
+     * @throws ValidationException with code `STRUCTURE_LINE_NOT_VALID`, `CARDINALITY_NOT_VALID`,
      *         `MIN_GREATER_THAN_MAX` or `VALUE_DUPLICATED` if the line is not valid.
      */
     static parse(rawLine: string, lineNumber: number): ChildLine {
@@ -24,7 +24,7 @@ export class ChildLineParser {
 
         const m = ChildLineParser.CHILD_LINE_PATTERN.exec(rawLine);
         if (!m) {
-            throw new ValidationException(lineNumber, "INVALID_CHILD_LINE", `Line not valid: ${rawLine}`);
+            throw new ValidationException(lineNumber, "STRUCTURE_LINE_NOT_VALID", `Line not valid: ${rawLine}`);
         }
 
         // m[1]=count, m[2]=type, m[3]=values
@@ -55,7 +55,7 @@ export class ChildLineParser {
         } else if (count.includes(",")) {
             const parts = count.split(",");
             if (parts.length !== 2) {
-                throw new ValidationException(lineNumber, "INVALID_CHILD_COUNT", `Invalid count ${count} in line: ${rawLine}`);
+                throw new ValidationException(lineNumber, "CARDINALITY_NOT_VALID", `Invalid count ${count} in line: ${rawLine}`);
             }
             const aNum = ChildLineParser.parseCount(parts[0].trim(), count, rawLine, lineNumber);
             const bNum = ChildLineParser.parseCount(parts[1].trim(), count, rawLine, lineNumber);
@@ -104,7 +104,7 @@ export class ChildLineParser {
     // num, min and max must be non-negative integers, with no trailing text (STXT-TEMPLATE-SPEC 7.1)
     private static parseCount(num: string, count: string, rawLine: string, lineNumber: number): number {
         if (!/^\d+$/.test(num)) {
-            throw new ValidationException(lineNumber, "INVALID_CHILD_COUNT", `Invalid count ${count} in line: ${rawLine}`);
+            throw new ValidationException(lineNumber, "CARDINALITY_NOT_VALID", `Invalid count ${count} in line: ${rawLine}`);
         }
         return parseInt(num, 10);
     }

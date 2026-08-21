@@ -2,6 +2,7 @@ import { Node } from "../core/Node";
 import { Parser } from "../core/Parser";
 import { StringUtils } from "../core/StringUtils";
 import { Schema } from "./Schema";
+import { ValidationException } from "../exceptions/ValidationException";
 import { transformNodeToSchema } from "./SchemaParser";
 import { SchemaProvider } from "./SchemaProvider";
 import { SchemaProviderMeta } from "./SchemaProviderMeta";
@@ -53,11 +54,16 @@ export class SchemaProviderMemory implements SchemaProvider {
      * own namespace.
      *
      * @param txt text of the `@stxt.schema` document.
-     * @throws ParseException or ValidationException if the document is not a valid schema.
+     * @throws ParseException or ValidationException if the document is not a valid schema; in
+     *         particular `SCHEMA_MULTIPLE_ROOTS` if it does not hold exactly one root node.
      */
     addSchema(txt: string): void {
         const parser: Parser = new Parser();
-        const node: Node = parser.parse(txt)[0];
+        const nodes: Node[] = parser.parse(txt);
+        if (nodes.length !== 1) {
+            throw new ValidationException(0, "SCHEMA_MULTIPLE_ROOTS", `A schema document must hold exactly 1 root node, got ${nodes.length}`);
+        }
+        const node: Node = nodes[0];
 
         // A schema that does not validate against its meta-schema must not be
         // registered (same policy as UnifiedSchemaProvider/DiscoveryResolver)

@@ -51,7 +51,7 @@ GRAMMAR_CASES.forEach(([type, good, bad]) => describe(`${type} type`, () => {
 	}));
 	it("rejects the block form", () => {
 		const node = new Parser().parse(`${type} (com.example.types) >>\n\t${good[0]}\n`)[0];
-		assert.deepStrictEqual(new SchemaValidator(PROVIDER, true).validate(node).map(e => e.code), ["NOT_ALLOWED_TEXT"]);
+		assert.deepStrictEqual(new SchemaValidator(PROVIDER, true).validate(node).map(e => e.code), ["BLOCK_FORM_NOT_ALLOWED"]);
 	});
 }));
 
@@ -98,7 +98,7 @@ describe("URL type", () => {
 
 	it("rejects the block form", () => {
 		const node = new Parser().parse("URL (com.example.types) >>\n\thttps://stxt.dev\n")[0];
-		assert.deepStrictEqual(new SchemaValidator(PROVIDER, true).validate(node).map(e => e.code), ["NOT_ALLOWED_TEXT"]);
+		assert.deepStrictEqual(new SchemaValidator(PROVIDER, true).validate(node).map(e => e.code), ["BLOCK_FORM_NOT_ALLOWED"]);
 	});
 });
 
@@ -140,6 +140,6 @@ describe("EMAIL type", () => {
 
 	it("rejects the block form", () => {
 		const node = new Parser().parse("EMAIL (com.example.types) >>\n\tana@example.com\n")[0];
-		assert.deepStrictEqual(new SchemaValidator(PROVIDER, true).validate(node).map(e => e.code), ["NOT_ALLOWED_TEXT"]);
+		assert.deepStrictEqual(new SchemaValidator(PROVIDER, true).validate(node).map(e => e.code), ["BLOCK_FORM_NOT_ALLOWED"]);
 	});
 });

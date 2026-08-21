@@ -8,6 +8,7 @@ import { Observer } from "../processors/Observer";
 import { Validator } from "../processors/Validator";
 import { ParseResult } from "./ParseResult";
 import { ParseException } from "../exceptions/ParseException";
+import { ValidationException } from "../exceptions/ValidationException";
 
 /**
  * Line-by-line STXT parsing engine. It knows nothing about schemas: semantic validation is
@@ -170,15 +171,19 @@ export class Parser {
 		}
 	}
 
-	private handleError(e: unknown, line: number, result: ParseResult, errorCode: string = "UNEXPECTED_ERROR", unknownErrorCode: string = "UNKNOWN_ERROR"): void {
+	/**
+	 * Records an error raised while parsing or validating a line. Typed exceptions travel as they
+	 * are; anything else is wrapped under the code `UNEXPECTED_ERROR` (as a ValidationException
+	 * when it was raised by a validator, so that the subtype still tells the phase apart).
+	 */
+	private handleError(e: unknown, line: number, result: ParseResult, validating: boolean = false): void {
 		if (e instanceof ParseException) {
 			result.addError(e);
-		} else if (e instanceof Error) {
-			// Turn generic errors into a ParseException
-			result.addError(new ParseException(line, errorCode, e.message));
 		} else {
-			// Unknown error
-			result.addError(new ParseException(line, unknownErrorCode, String(e)));
+			const message = e instanceof Error ? e.message : String(e);
+			result.addError(validating
+				? new ValidationException(line, "UNEXPECTED_ERROR", message)
+				: new ParseException(line, "UNEXPECTED_ERROR", message));
 		}
 	}
 
@@ -194,7 +199,7 @@ export class Parser {
 						result.addError(error);
 					});
 				} catch (e: unknown) {
-					this.handleError(e, completed.getLine(), result, "VALIDATION_ERROR", "UNKNOWN_VALIDATION_ERROR");
+					this.handleError(e, completed.getLine(), result, true);
 				}
 			});
 

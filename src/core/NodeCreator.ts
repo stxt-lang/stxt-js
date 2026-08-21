@@ -49,7 +49,7 @@ export function createNode(lineIndent: Line, lineNumber: number): Node {
     }
 
     if (textNode && StringUtils.trim(value).length > 0) {
-        throw new ParseException(lineNumber, "INLINE_VALUE_NOT_VALID", `Line not valid: ${line}`);
+        throw new ParseException(lineNumber, "BLOCK_VALUE_NOT_ALLOWED", `Line not valid: ${line}`);
     }
 
     // The namespace the line declares, if any (empty when it inherits)

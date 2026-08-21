@@ -17,7 +17,7 @@ import { Parser } from "../core/Parser";
  */
 describe("SchemaProviderMemory.addSchema", () => {
 	// Passes the parser and the transform, but Type: FOO violates the meta-schema ENUM
-	const INVALID_SCHEMA = [
+	const INVALID_SCHEMA_TEXT = [
 		"Schema (@stxt.schema): com.example.demo",
 		"\tNode: Root",
 		"\t\tType: FOO",
@@ -35,7 +35,7 @@ describe("SchemaProviderMemory.addSchema", () => {
 		const provider = new SchemaProviderMemory();
 
 		assert.throws(
-			() => provider.addSchema(INVALID_SCHEMA),
+			() => provider.addSchema(INVALID_SCHEMA_TEXT),
 			(e: unknown) => e instanceof ValidationException,
 			"an invalid schema must throw a ValidationException"
 		);
@@ -131,7 +131,7 @@ describe("TemplateSchemaProviderMemory.addTemplate", () => {
 
 		assert.throws(
 			() => provider.addTemplate(invalidStructure),
-			(e: unknown) => e instanceof ValidationException && e.code === "INVALID_CHILD_LINE"
+			(e: unknown) => e instanceof ValidationException && e.code === "STRUCTURE_LINE_NOT_VALID"
 		);
 	});
 });

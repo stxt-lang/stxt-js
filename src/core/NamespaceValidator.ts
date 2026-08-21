@@ -22,6 +22,16 @@ export class NamespaceValidator {
 	 * @param lineNumber line number, for the error message.
 	 * @throws ParseException with code `INVALID_NAMESPACE` if it does not match the format.
 	 */
+	/**
+	 * Tells whether a namespace matches the format, without throwing.
+	 *
+	 * @param namespace already normalized namespace to check.
+	 * @returns true if it matches the format; false when it is null, empty or malformed.
+	 */
+	static isValid(namespace: string | null | undefined): boolean {
+		return !!namespace && NamespaceValidator.NAMESPACE_FORMAT.test(namespace);
+	}
+
 	static validateNamespaceFormat(namespace: string | null | undefined, lineNumber: number): void {
 		if (!namespace) {
 			return;

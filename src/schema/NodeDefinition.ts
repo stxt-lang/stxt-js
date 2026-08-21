@@ -81,12 +81,12 @@ export class NodeDefinition {
      * Adds the definition of an expected child.
      *
      * @param childDefinition definition of the child to add.
-     * @throws ValidationException with code `CHILD_DEF_ALREADY_DEFINED` if a definition for that child already existed.
+     * @throws ValidationException with code `CHILD_DUPLICATED` if a definition for that child already existed.
      */
     addChildDefinition(childDefinition: ChildDefinition): void {
         const qname = childDefinition.getQualifiedName();
         if (this.children.has(qname)) {
-            throw new ValidationException(0, "CHILD_DEF_ALREADY_DEFINED", `Exists a previous node definition with: ${qname}`);
+            throw new ValidationException(0, "CHILD_DUPLICATED", `Exists a previous node definition with: ${qname}`);
         }
         this.children.set(qname, childDefinition);
     }

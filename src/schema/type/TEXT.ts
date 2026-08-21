@@ -12,7 +12,7 @@ export const TEXT: Type = {
 
 	validate(nodeDef: NodeDefinition, node: Node): void {
 		if (node instanceof InlineNode && node.getChildren().length > 0) {
-			throw new ValidationException(node.getLine(), "NOT_ALLOWED_CHILDREN_TEXT", `Not allowed children nodes in node ${node.getQualifiedName()}`);
+			throw new ValidationException(node.getLine(), "CHILDREN_NOT_ALLOWED", `Not allowed children nodes in node ${node.getQualifiedName()}`);
 		}
 	},
 };

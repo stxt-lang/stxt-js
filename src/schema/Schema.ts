@@ -45,13 +45,13 @@ export class Schema {
      * Adds the definition of a node to this schema.
      *
      * @param nodeDefinition node definition to add.
-     * @throws ValidationException with code `NODE_DEF_ALREADY_DEFINED` if there already was a node definition with the same name.
+     * @throws ValidationException with code `NODE_DUPLICATED` if there already was a node definition with the same name.
      */
     addNodeDefinition(nodeDefinition: NodeDefinition): void {
         const qname = nodeDefinition.getCanonicalName();
 
         if (this.nodes.has(qname)) {
-            throw new ValidationException(0, "NODE_DEF_ALREADY_DEFINED", `Exists a previous node definition with: ${qname}`);
+            throw new ValidationException(0, "NODE_DUPLICATED", `Exists a previous node definition with: ${qname}`);
         }
 
         this.nodes.set(qname, nodeDefinition);
