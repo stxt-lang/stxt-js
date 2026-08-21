@@ -17,8 +17,8 @@ export class Line {
 	public readonly isComment: boolean;
 	/** True if the line is a text line belonging to an open BLOCK node (`>>`). */
 	public readonly isBlock: boolean;
-	/** Number of characters the indentation took up. */
-	public readonly indentLength: number;
+	/** Index of the first character of the content (the number of characters the indentation took up). */
+	public readonly contentStart: number;
 
 	/**
 	 * Creates a line already split into indentation and content.
@@ -27,14 +27,14 @@ export class Line {
 	 * @param content content of the line without its indentation.
 	 * @param isComment true if the line is a comment.
 	 * @param isBlock true if the line belongs to an open text block.
-	 * @param indentLength number of characters the indentation took up.
+	 * @param contentStart index of the first character of the content, i.e. the number of characters the indentation took up.
 	 */
-	constructor(level: number, content: string, isComment: boolean, isBlock: boolean, indentLength: number) {
+	constructor(level: number, content: string, isComment: boolean, isBlock: boolean, contentStart: number) {
 		this.level = level;
 		this.content = content;
 		this.isComment = isComment;
 		this.isBlock = isBlock;
-		this.indentLength = indentLength;
+		this.contentStart = contentStart;
 
 	}
 	/** @returns true if the line has no content beyond blanks (space/tab only, spec 4). */

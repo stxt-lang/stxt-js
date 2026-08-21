@@ -66,7 +66,9 @@ export function parseLine(line: string, lastNodeBlock: boolean, lastLevel: numbe
 			if (validate && sawSpace && sawTab && text.length > 0) {
 				throw new ParseException(numLine, "INDENTATION_MIXED", `Mixed tabs and spaces in indentation`);
 			}
-			return new Line(level, text, false, true, pointer);
+			// pointer is the index of the indentation character that crossed the block level;
+			// the indentation took pointer + 1 characters
+			return new Line(level, text, false, true, pointer + 1);
 		}
 
 		// Move the pointer forward

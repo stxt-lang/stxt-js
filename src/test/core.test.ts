@@ -2,8 +2,16 @@ import * as assert from "assert";
 import { Parser } from "../core/Parser";
 import { TextNode } from "../core/TextNode";
 import { InlineNode } from "../core/InlineNode";
+import { parseLine } from "../core/LineParser";
 
 describe("Core conformance regressions", () => {
+	it("parseLine reports the number of characters the indentation took, in every form", () => {
+		assert.strictEqual(parseLine("\t\tName: value", false, 1, 1).contentStart, 2);
+		assert.strictEqual(parseLine("\t# hi", false, 0, 1).contentStart, 1);
+		const block = parseLine("\t\t  text ", true, 1, 1);
+		assert.deepStrictEqual([block.isBlock, block.content, block.contentStart], [true, "  text", 2]);
+	});
+
 	it("accepts a decomposed Unicode name and gives it the NFC canonical name", () => {
 		const node = new Parser().parse("Cafe\u0301: value\n")[0];
 
