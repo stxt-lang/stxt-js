@@ -8,8 +8,8 @@ describe("Core conformance regressions", () => {
 		const node = new Parser().parse("Cafe\u0301: value\n")[0];
 
 		assert.strictEqual(node.getName(), "Cafe\u0301");
-		assert.strictEqual(node.getNormalizedName(), "café");
-		assert.strictEqual(node.getNormalizedName(), new Parser().parse("Café: value\n")[0].getNormalizedName());
+		assert.strictEqual(node.getCanonicalName(), "café");
+		assert.strictEqual(node.getCanonicalName(), new Parser().parse("Café: value\n")[0].getCanonicalName());
 	});
 
 	it("accepts combining marks (Mn, Mc) in names and still requires a letter or digit (spec 4.2)", () => {

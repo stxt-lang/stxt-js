@@ -21,23 +21,30 @@ export { StringUtils } from "./core/StringUtils";
 
 export { ParseException } from "./exceptions/ParseException";
 export { ValidationException } from "./exceptions/ValidationException";
+export { RuntimeException } from "./exceptions/RuntimeException";
 
 export { Observer } from "./processors/Observer";
+export { Validator } from "./processors/Validator";
 
 export { Schema } from "./schema/Schema";
 export { SchemaValidator } from "./schema/SchemaValidator";
 export { SchemaProvider } from "./schema/SchemaProvider";
+export { SchemaProviderMemory } from "./schema/SchemaProviderMemory";
+export { SchemaProviderMeta } from "./schema/SchemaProviderMeta";
+export { TypeRegistry } from "./schema/TypeRegistry";
+export type { Type } from "./schema/Type";
 export { NodeDefinition } from "./schema/NodeDefinition";
 export { ChildDefinition } from "./schema/ChildDefinition";
 export { transformNodeToSchema } from "./schema/SchemaParser";
 
 export { UnifiedSchemaProvider } from "./runtime/UnifiedSchemaProvider";
-export { ConditionalValidator } from "./runtime/ConditionalValidator";
 export { NodeWriter, IndentStyle } from "./runtime/NodeWriter";
 export { toCanonicalTree, toCanonicalJson } from "./runtime/TreeJson";
 export type { CanonicalDocument, CanonicalNode, CanonicalInlineNode, CanonicalBlockNode } from "./runtime/TreeJson";
 
-export { transformTemplateNodeToSchema } from "./template/TemplateParser";
+export { transformTemplateNodeToSchema, TEMPLATE_NAMESPACE } from "./template/TemplateParser";
+export { TemplateSchemaProviderMemory } from "./template/TemplateSchemaProviderMemory";
+export { MetaTemplateSchemaProvider } from "./template/MetaTemplateSchemaProvider";
 
 export { DiscoveryResolver, DiscoveryOptions } from "./discovery/DiscoveryResolver";
 export { DiscoveryResult, DiscoveryDefinition, DiscoveryLevel } from "./discovery/DiscoveryResult";

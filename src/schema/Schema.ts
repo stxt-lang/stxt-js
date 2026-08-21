@@ -26,6 +26,11 @@ export class Schema {
         NamespaceValidator.validateNamespaceFormat(this.namespace, line);
     }
 
+    /** @returns the description of the schema (STXT-SCHEMA-SPEC §6.1), or undefined if it has none. */
+    getDescription(): string | undefined {
+        return this.description;
+    }
+
     /** @returns the node definitions, indexed by their canonical name. */
     getNodes(): ReadonlyMap<string, NodeDefinition> {
         return this.nodes;

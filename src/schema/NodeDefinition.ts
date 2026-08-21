@@ -8,7 +8,7 @@ import { ChildDefinition } from "./ChildDefinition";
  */
 export class NodeDefinition {
     private readonly name: string;
-    private readonly normalizedName: string;
+    private readonly canonicalName: string;
     private readonly type: string;
     private description: string | undefined;
 
@@ -26,7 +26,7 @@ export class NodeDefinition {
      */
     constructor(name: string, type: string, line: number, description: string | undefined) {
         this.name = StringUtils.compactSpaces(name);
-        this.normalizedName = StringUtils.normalize(name);
+        this.canonicalName = StringUtils.normalize(name);
         this.type = type;
         this.description = description;
 
@@ -42,15 +42,7 @@ export class NodeDefinition {
 
     /** @returns the canonical name of the node. */
     getCanonicalName(): string {
-        return this.normalizedName;
-    }
-
-    /**
-     * @returns the canonical name of the node.
-     * @deprecated since 0.7.0, use getCanonicalName().
-     */
-    getNormalizedName(): string {
-        return this.normalizedName;
+        return this.canonicalName;
     }
 
     /** @returns the name of the value type of this node (see {@link TypeRegistry}). */
@@ -137,7 +129,7 @@ export class NodeDefinition {
     toJSON() {
         return {
             name: this.getName(),
-            normalizedName: this.getNormalizedName(),
+            canonicalName: this.getCanonicalName(),
             type: this.getType(),
             description: this.description,
             children: Array.from(this.getChildren().values()).map(c => c.toJSON()),

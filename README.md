@@ -117,7 +117,6 @@ import {
     Parser,
     UnifiedSchemaProvider,
     SchemaValidator,
-    ConditionalValidator,
     ValidationException,
 } from '@stxt-lang/core';
 
@@ -138,8 +137,8 @@ const provider = new UnifiedSchemaProvider();
 provider.addFile(schemaText);
 
 const parser = new Parser();
-// ConditionalValidator only validates nodes that carry a namespace
-parser.registerValidator(new ConditionalValidator(new SchemaValidator(provider)));
+// Only nodes that carry a namespace are validated; free nodes pass through
+parser.registerValidator(new SchemaValidator(provider));
 
 const result = parser.parseResult(documentText);
 
@@ -223,7 +222,7 @@ class NodeEnvironment implements DiscoveryEnvironment {
 With those in place, resolving a document and validating it is two steps — and note that `DiscoveryResult` implements `SchemaProvider`, so it goes straight into the validator:
 
 ```ts
-import { Parser, SchemaValidator, ConditionalValidator } from '@stxt-lang/core';
+import { Parser, SchemaValidator } from '@stxt-lang/core';
 
 const resolver = new DiscoveryResolver(new NodeFileSystem(), new NodeEnvironment());
 
@@ -240,7 +239,7 @@ for (const error of result.getErrors()) {
 }
 
 const parser = new Parser();
-parser.registerValidator(new ConditionalValidator(new SchemaValidator(result)));
+parser.registerValidator(new SchemaValidator(result));
 
 const parsed = parser.parseResult(documentText);
 ```
@@ -297,10 +296,11 @@ const doc = NodeWriter.toSTXTDocs(result.getNodes(), IndentStyle.SPACES_4);
 Everything importable from the package:
 
 - **Parsing** — `Node`, `InlineNode`, `TextNode`, `Parser`, `ParseResult`, `Line`, `Constants`, `parseLine`, `StringUtils`
-- **Exceptions** — `ParseException`, `ValidationException`
-- **Extension points** — `Observer`
-- **Schemas** — `Schema`, `SchemaValidator`, `SchemaProvider`, `NodeDefinition`, `ChildDefinition`, `transformNodeToSchema`, `transformTemplateNodeToSchema`
-- **Runtime** — `UnifiedSchemaProvider`, `ConditionalValidator`, `NodeWriter`, `IndentStyle`
+- **Exceptions** — `ParseException`, `ValidationException`, `RuntimeException`
+- **Extension points** — `Observer`, `Validator`
+- **Schemas** — `Schema`, `SchemaValidator`, `SchemaProvider`, `SchemaProviderMemory`, `SchemaProviderMeta`, `NodeDefinition`, `ChildDefinition`, `TypeRegistry`, `Type`, `transformNodeToSchema`
+- **Templates** — `transformTemplateNodeToSchema`, `TEMPLATE_NAMESPACE`, `TemplateSchemaProviderMemory`, `MetaTemplateSchemaProvider`
+- **Runtime** — `UnifiedSchemaProvider`, `NodeWriter`, `IndentStyle`
 - **Discovery** — `DiscoveryResolver`, `DiscoveryOptions`, `DiscoveryResult`, `DiscoveryDefinition`, `DiscoveryLevel`, `DiscoveryError`, `DiscoveryFileSystem`, `DiscoveryEntry`, `DiscoveryEnvironment`
 
 ## License

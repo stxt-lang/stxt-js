@@ -2,7 +2,6 @@ import * as fs from "fs";
 import * as path from "path";
 import { Parser } from "../core/Parser";
 import { ParseResult } from "../core/ParseResult";
-import { ConditionalValidator } from "../runtime/ConditionalValidator";
 import { SchemaValidator } from "../schema/SchemaValidator";
 import { UnifiedSchemaProvider } from "../runtime/UnifiedSchemaProvider";
 import { ParseException } from "../exceptions/ParseException";
@@ -104,7 +103,7 @@ export function loadProvider(root: string, dirs: readonly string[] = SCHEMA_DIRS
  */
 export function parseWithSchemas(text: string, provider: UnifiedSchemaProvider): ParseResult {
 	const parser = new Parser();
-	parser.registerValidator(new ConditionalValidator(new SchemaValidator(provider)));
+	parser.registerValidator(new SchemaValidator(provider));
 
 	return parser.parseResult(text);
 }

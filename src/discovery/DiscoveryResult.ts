@@ -39,7 +39,7 @@ export interface DiscoveryLevel {
  * error found along the way.
  *
  * It implements {@link SchemaProvider}, so it can be handed directly to a
- * `SchemaValidator`/`ConditionalValidator` to validate the document it was resolved for.
+ * `SchemaValidator` to validate the document it was resolved for.
  * Like `UnifiedSchemaProvider`, it serves the meta-schemas of the two reserved namespaces
  * itself, so schema and template documents also validate against it.
  */

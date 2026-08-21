@@ -32,7 +32,7 @@ describeCorpus("Documents of stxt-web", root => {
 
 	it("every document declares a namespace with a known schema", () => {
 		// If this fails, the tests above would pass trivially: with no namespace
-		// the ConditionalValidator validates nothing.
+		// the SchemaValidator validates nothing (STXT-SCHEMA-SPEC 5).
 		for (const file of files) {
 			const nodes = new Parser().parseResult(fs.readFileSync(file, "utf-8")).getNodes();
 

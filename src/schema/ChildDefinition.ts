@@ -4,7 +4,7 @@ import { StringUtils } from "../core/StringUtils";
 
 /** Definition of an expected child inside a {@link NodeDefinition}: name, namespace and min/max cardinality. */
 export class ChildDefinition {
-	private readonly normalizedName: string;
+	private readonly canonicalName: string;
 	private readonly name: string;
 	private readonly namespace: string;
 	private readonly min: number | null;
@@ -22,7 +22,7 @@ export class ChildDefinition {
 	 */
 	constructor(name: string, namespace: string | null | undefined,	min: number | null,	max: number | null,	numLine: number) {
 		this.name = StringUtils.compactSpaces(name);
-		this.normalizedName = StringUtils.normalize(name);
+		this.canonicalName = StringUtils.normalize(name);
 		this.namespace = StringUtils.lowerCase(namespace);
 		this.min = min;
 		this.max = max;
@@ -41,15 +41,7 @@ export class ChildDefinition {
 
 	/** @returns the canonical name of the expected child. */
 	getCanonicalName(): string {
-		return this.normalizedName;
-	}
-
-	/**
-	 * @returns the canonical name of the expected child.
-	 * @deprecated since 0.7.0, use getCanonicalName().
-	 */
-	getNormalizedName(): string {
-		return this.normalizedName;
+		return this.canonicalName;
 	}
 
 	/** @returns the namespace of the expected child, or the empty string if it has none. */
@@ -70,15 +62,15 @@ export class ChildDefinition {
 	/** @returns the canonical name prefixed by its namespace, used as the key in {@link NodeDefinition.getChildren}. */
 	getQualifiedName(): string {
 		return this.namespace.length === 0
-			? this.normalizedName
-			: `${this.namespace}:${this.normalizedName}`;
+			? this.canonicalName
+			: `${this.namespace}:${this.canonicalName}`;
 	}
 
 	/** @returns a plain object with the definition, so that JSON.stringify serializes it. */
 	toJSON() {
 		return {
 			name: this.getName(),
-			normalizedName: this.getNormalizedName(),
+			canonicalName: this.getCanonicalName(),
 			namespace: this.getNamespace(),
 			min: this.getMin(),
 			max: this.getMax(),

@@ -1,6 +1,7 @@
 import * as assert from "assert";
 import { Parser } from "../core/Parser";
 import { Node } from "../core/Node";
+import { InlineNode } from "../core/InlineNode";
 import { ParseException } from "../exceptions/ParseException";
 import { ValidationException } from "../exceptions/ValidationException";
 import { SchemaProviderMemory } from "../schema/SchemaProviderMemory";
@@ -12,6 +13,9 @@ import { RuntimeException } from "../exceptions/RuntimeException";
 import { Constants } from "../core/Constants";
 import { SPEC_VERSION } from "../all";
 import * as all from "../all";
+import * as fs from "fs";
+import * as path from "path";
+import { findStxtWeb } from "./corpus";
 
 /**
  * Error codes introduced or split in 0.9.1 (normative annexes STXT-SPEC 11.1, STXT-SCHEMA-SPEC 13.1
@@ -234,6 +238,16 @@ describe("SPEC_VERSION", () => {
 		assert.strictEqual(SPEC_VERSION, "1.0");
 		assert.strictEqual(Constants.SPEC_VERSION, SPEC_VERSION);
 		assert.strictEqual(all.SPEC_VERSION, "1.0");
+	});
+
+	it("equals Metadata/Version of STXT-SPEC in stxt-web (es/stxt-core-ref.stxt)", () => {
+		const file = path.join(findStxtWeb(), "es", "stxt-core-ref.stxt");
+		const root = new Parser().parse(fs.readFileSync(file, "utf-8"))[0] as InlineNode;
+		const metadata = root.getChild("Metadata") as InlineNode;
+		const version = metadata.getChild("Version") as InlineNode | null;
+
+		assert.ok(version, "STXT-SPEC has no Metadata/Version");
+		assert.strictEqual(Constants.SPEC_VERSION, version!.getValue());
 	});
 });
 

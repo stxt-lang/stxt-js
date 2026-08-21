@@ -244,10 +244,9 @@ describe("Node model (0.7.0)", () => {
 		assert.strictEqual(new TextNode("T").getLine(), Node.NO_LINE);
 	});
 
-	it("getNormalizedName is the deprecated alias of getCanonicalName", () => {
+	it("getCanonicalName folds case and separators", () => {
 		const n = new InlineNode("Año Nuevo");
 		assert.strictEqual(n.getCanonicalName(), "año-nuevo");
-		assert.strictEqual(n.getNormalizedName(), n.getCanonicalName());
 	});
 
 	// ---------------------------------------------------------------- lookups

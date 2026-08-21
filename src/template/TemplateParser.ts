@@ -16,7 +16,8 @@ import { TypeRegistry } from "../schema/TypeRegistry";
 import { NamespaceValidator } from "../core/NamespaceValidator";
 
 /** Namespace of the template language itself, `@stxt.template`. */
-const TEMPLATE_NAMESPACE = "@stxt.template";
+/** Namespace of the template language itself, `@stxt.template`. */
+export const TEMPLATE_NAMESPACE = "@stxt.template";
 
 /**
  * Turns the tree of an already parsed `@stxt.template` document into an equivalent {@link Schema}.

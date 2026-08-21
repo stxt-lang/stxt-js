@@ -80,15 +80,6 @@ export abstract class Node {
 		return this.canonicalName;
 	}
 
-	/**
-	 * @returns the canonical name of the node.
-	 * @deprecated since 0.7.0, use {@link Node.getCanonicalName}; "canonical name" is the term of
-	 *             the specifications. To be removed in a later version.
-	 */
-	getNormalizedName(): string {
-		return this.canonicalName;
-	}
-
 	/** @returns the canonical name prefixed by the effective namespace (`namespace:name`), or just the canonical name when there is no namespace. */
 	getQualifiedName(): string {
 		const namespace = this.getNamespace();
