@@ -10,7 +10,10 @@ export class Line {
 	public readonly level: number;
 	/** Content of the line with the indentation already removed. */
 	public readonly content: string;
-	/** True if the line is a comment (`#`). */
+	/**
+	 * True if the line is a comment (`#`). Its indentation has already been validated like a
+	 * node's (spec 9), but it produces no node and never moves the hierarchy.
+	 */
 	public readonly isComment: boolean;
 	/** True if the line is a text line belonging to an open BLOCK node (`>>`). */
 	public readonly isBlock: boolean;

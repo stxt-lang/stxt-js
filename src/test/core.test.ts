@@ -47,6 +47,27 @@ describe("Core conformance regressions", () => {
 		assert.deepStrictEqual(codes("Body >>\n\tfirst\n# oops\n\tsecond\n"), ["INVALID_LINE"]);
 	});
 
+	it("validates the indentation of a comment like a node's (spec 9 and 11, 0.9.0)", () => {
+		const errors = (text: string) => new Parser().parseResult(text).getErrors().map(e => [e.code, e.line]);
+		assert.deepStrictEqual(errors("Root:\n\t # mixed\n\tChild: x\n"), [["MIXED_INDENTATION", 2]]);
+		assert.deepStrictEqual(errors("Root:\n   # three spaces\n\tChild: x\n"), [["INVALID_NUMBER_SPACES", 2]]);
+		assert.deepStrictEqual(errors("Root:\n\t\t# too deep\n\tChild: x\n"), [["INDENTATION_LEVEL_NOT_VALID", 2]]);
+	});
+
+	it("accepts comments at level 0, 1 and at last node level + 1", () => {
+		const result = new Parser().parseResult("# level 0\nRoot:\n\t# level 1\n\tChild: x\n\t\t# last + 1 after a childless node\n\tOther: y\n");
+		assert.deepStrictEqual(result.getErrors(), []);
+		const root = result.getNodes()[0] as InlineNode;
+		assert.deepStrictEqual(root.getChildren().map(c => c.getName()), ["Child", "Other"]);
+	});
+
+	it("checks the node after a comment against the last node, not against the comment", () => {
+		// The comment at level 2 is valid (last node is at level 1) but never becomes the reference
+		const errors = (text: string) => new Parser().parseResult(text).getErrors().map(e => [e.code, e.line]);
+		assert.deepStrictEqual(errors("Root:\n\tFirst: 1\n\tSecond: 2\n\t\t# c\n\tThird: 3\n"), []);
+		assert.deepStrictEqual(errors("Root:\n\tFirst: 1\n\t\t# c\n\t\t\tDeep: 3\n"), [["INDENTATION_LEVEL_NOT_VALID", 4]]);
+	});
+
 	it("finishes the block before notifying the comment to the observers", () => {
 		const events: string[] = [];
 		const parser = new Parser();

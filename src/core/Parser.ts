@@ -106,6 +106,8 @@ export class Parser {
 			const line: Line = parseLine(lineString, lastNodeText, lastLevel, lineNumber);
 
 			if (line.isComment) {
+				// Its indentation was validated by parseLine like a node's (spec 9), but it never
+				// becomes the reference level: the stack (and so lastLevel) is only moved by nodes.
 				// A comment at the level of an open block node (or shallower) closes the block
 				// (spec 6.1 and 9.1): a block is a literal and cannot be commented from inside.
 				// Only the block closes; the comment does not touch the rest of the hierarchy.
