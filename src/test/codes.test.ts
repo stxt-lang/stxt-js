@@ -251,6 +251,8 @@ describe("UNEXPECTED_ERROR: wrapper for an unforeseen exception", () => {
 
 	it("wraps a non-Error value too", () => {
 		const parser = new Parser();
+		// Deliberate: the wrapper must cope with thrown values that are not Error objects
+		// eslint-disable-next-line no-throw-literal
 		parser.registerValidator({ validate: () => { throw "plain string"; } });
 		const errors = parser.parseResult("A: 1\n").getErrors();
 		assert.deepStrictEqual(errors.map(e => e.code), ["UNEXPECTED_ERROR"]);
