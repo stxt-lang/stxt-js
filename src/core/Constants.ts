@@ -1,10 +1,11 @@
 /** Characters and sizes fixed by STXT-SPEC that the parser and the writer share. */
 export class Constants {
 	/**
-	 * Version of the STXT specifications (STXT-SPEC, STXT-TREE-SPEC, STXT-SCHEMA-SPEC,
-	 * STXT-TEMPLATE-SPEC, STXT-DISCOVERY-SPEC) this library implements. It is distinct from the
-	 * version of the package: the package may be released many times against the same
-	 * specification version.
+	 * Version of STXT-SPEC (the base syntax) this library implements; "STXT 1.0" on its own means
+	 * this number (STXT-SPEC §1.1). Each specification is versioned independently, so the schema,
+	 * template, tree and discovery specs may carry other numbers. It is distinct from the version
+	 * of the package: the package may be released many times against the same specification
+	 * version.
 	 */
 	static readonly SPEC_VERSION: string = "1.0";
 	/** Character that opens a comment line. */

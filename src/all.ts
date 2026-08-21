@@ -11,9 +11,9 @@ export { Line } from "./core/Line";
 export { Constants } from "./core/Constants";
 import { Constants as _Constants } from "./core/Constants";
 /**
- * Version of the STXT specifications (STXT-SPEC, STXT-TREE-SPEC, STXT-SCHEMA-SPEC,
- * STXT-TEMPLATE-SPEC, STXT-DISCOVERY-SPEC) this library implements, distinct from the version of
- * the package. Same value as `Constants.SPEC_VERSION`.
+ * Version of STXT-SPEC (the base syntax) this library implements, distinct from the version of
+ * the package; each specification is versioned independently (STXT-SPEC §1.1). Same value as
+ * `Constants.SPEC_VERSION`.
  */
 export const SPEC_VERSION: string = _Constants.SPEC_VERSION;
 export { parseLine } from "./core/LineParser";
