@@ -291,6 +291,22 @@ const text = NodeWriter.toSTXT(node, IndentStyle.TABS);
 const doc = NodeWriter.toSTXTDocs(result.getNodes(), IndentStyle.SPACES_4);
 ```
 
+`NodeWriter` re-serializes the tree, so comments and blank lines are gone. To reformat a document
+**keeping everything the author wrote**, use `Formatter`: it rewrites the original text line by
+line — node lines in canonical form, block lines re-indented to their block, comments and blank
+lines kept with their indentation units converted — and reports the syntax errors it met, so the
+caller decides what to do with a document that does not parse. It is the formatter behind
+`stxt format`, the VS Code extension and the playground.
+
+```ts
+import { Formatter, IndentStyle } from '@stxt-lang/core';
+
+const { text, errors } = Formatter.format(source, IndentStyle.TABS);
+if (errors.length === 0) {
+  fs.writeFileSync(file, text);
+}
+```
+
 ## API surface
 
 Everything importable from the package:
@@ -300,7 +316,7 @@ Everything importable from the package:
 - **Extension points** — `Observer`, `Validator`
 - **Schemas** — `Schema`, `SchemaValidator`, `SchemaProvider`, `SchemaProviderMemory`, `SchemaProviderMeta`, `NodeDefinition`, `ChildDefinition`, `TypeRegistry`, `Type`, `transformNodeToSchema`
 - **Templates** — `transformTemplateNodeToSchema`, `TEMPLATE_NAMESPACE`, `TemplateSchemaProviderMemory`, `MetaTemplateSchemaProvider`
-- **Runtime** — `UnifiedSchemaProvider`, `NodeWriter`, `IndentStyle`
+- **Runtime** — `UnifiedSchemaProvider`, `NodeWriter`, `IndentStyle`, `Formatter`, `FormatResult`, `toCanonicalTree`, `toCanonicalJson`
 - **Discovery** — `DiscoveryResolver`, `DiscoveryOptions`, `DiscoveryResult`, `DiscoveryDefinition`, `DiscoveryLevel`, `DiscoveryError`, `DiscoveryFileSystem`, `DiscoveryEntry`, `DiscoveryEnvironment`
 
 ## License

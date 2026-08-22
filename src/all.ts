@@ -39,6 +39,8 @@ export { transformNodeToSchema } from "./schema/SchemaParser";
 
 export { UnifiedSchemaProvider } from "./runtime/UnifiedSchemaProvider";
 export { NodeWriter, IndentStyle } from "./runtime/NodeWriter";
+export { Formatter } from "./runtime/Formatter";
+export type { FormatResult } from "./runtime/Formatter";
 export { toCanonicalTree, toCanonicalJson } from "./runtime/TreeJson";
 export type { CanonicalDocument, CanonicalNode, CanonicalInlineNode, CanonicalBlockNode } from "./runtime/TreeJson";
 
