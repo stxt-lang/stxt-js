@@ -7,35 +7,35 @@ import { UnifiedSchemaProvider } from "../runtime/UnifiedSchemaProvider";
 import { ParseException } from "../exceptions/ParseException";
 
 /**
- * Helpers for the regression tests against the real corpus in `../stxt-web`.
+ * Helpers for the regression tests against the real corpus in `../stxt-lang`.
  *
- * The corpus is deliberately not copied into this repository: stxt-web is the
+ * The corpus is deliberately not copied into this repository: stxt-lang is the
  * normative source of the language and the tests must fail when the implementation
  * drifts away from the real documents, not from a frozen copy.
  *
- * The corpus is mandatory: if `stxt-web` cannot be located, the corpus suites fail
+ * The corpus is mandatory: if `stxt-lang` cannot be located, the corpus suites fail
  * (they are never skipped). A silently skipped corpus once hid a broken locator for
  * days, so "no corpus" is treated as an error, not as a pending run.
  */
 
-// Folders of stxt-web holding schemas and templates (they are loaded into the provider).
+// Folders of stxt-lang holding schemas and templates (they are loaded into the provider).
 export const SCHEMA_DIRS = [".stxt", "examples/definitions"];
 
-// Folders of stxt-web holding documents that must validate against those schemas.
+// Folders of stxt-lang holding documents that must validate against those schemas.
 export const DOC_DIRS = ["docs", "es", "en"];
 
 /**
- * Locates `stxt-web`. It can be forced with the STXT_WEB environment variable;
- * by default it is looked up as a sibling project (`../stxt-web` from this repo).
+ * Locates `stxt-lang`. It can be forced with the STXT_LANG environment variable;
+ * by default it is looked up as a sibling project (`../stxt-lang` from this repo).
  *
- * @returns the root of stxt-web.
+ * @returns the root of stxt-lang.
  * @throws Error if it cannot be found: the corpus is mandatory, never optional.
  */
-export function findStxtWeb(): string {
+export function findStxtLang(): string {
 	const candidates = [
-		process.env.STXT_WEB,
+		process.env.STXT_LANG,
 		// __dirname is <repo>/out/test
-		path.resolve(__dirname, "..", "..", "..", "stxt-web"),
+		path.resolve(__dirname, "..", "..", "..", "stxt-lang"),
 	];
 
 	for (const candidate of candidates) {
@@ -45,9 +45,9 @@ export function findStxtWeb(): string {
 	}
 
 	throw new Error(
-		"The corpus of the sibling project stxt-web is required and was not found. Tried: "
+		"The corpus of the sibling project stxt-lang is required and was not found. Tried: "
 		+ candidates.filter(c => c).map(c => `"${c}"`).join(", ")
-		+ ". Clone stxt-lang/stxt-web next to this repository or set STXT_WEB=/path/to/stxt-web.");
+		+ ". Clone stxt-lang/stxt-lang next to this repository or set STXT_LANG=/path/to/stxt-lang.");
 }
 
 // Every .stxt file under a directory, recursively and in a stable order.
@@ -71,7 +71,7 @@ export function findStxtFiles(dir: string): string[] {
 	return result.sort();
 }
 
-// The .stxt files of the given folders, relative to the root of stxt-web.
+// The .stxt files of the given folders, relative to the root of stxt-lang.
 export function corpusFiles(root: string, dirs: readonly string[]): string[] {
 	return dirs.flatMap(dir => findStxtFiles(path.join(root, dir)));
 }
@@ -80,7 +80,7 @@ export function corpusFiles(root: string, dirs: readonly string[]): string[] {
  * Loads into a provider every schema/template of the given folders, just like
  * `SchemaLoader` does with `<workspace>/.stxt/**`.
  *
- * @param root root of stxt-web.
+ * @param root root of stxt-lang.
  * @param dirs folders to load the schemas and templates from.
  * @returns the provider with everything already registered.
  */
@@ -114,21 +114,21 @@ export function describeErrors(errors: readonly ParseException[]): string {
 }
 
 /**
- * `describe` over the corpus. When stxt-web cannot be located the block is NOT
+ * `describe` over the corpus. When stxt-lang cannot be located the block is NOT
  * skipped: it turns into a single failing test that explains what is missing, so
  * that a broken locator or an isolated clone can never pass unnoticed.
  *
  * @param title title of the block.
- * @param body body of the block, which gets the root of stxt-web.
+ * @param body body of the block, which gets the root of stxt-lang.
  */
 export function describeCorpus(title: string, body: (root: string) => void): void {
 	let root: string;
 	try {
-		root = findStxtWeb();
+		root = findStxtLang();
 	}
 	catch (error) {
 		describe(title, () => {
-			it("finds the mandatory corpus of the sibling project stxt-web", () => {
+			it("finds the mandatory corpus of the sibling project stxt-lang", () => {
 				throw error;
 			});
 		});

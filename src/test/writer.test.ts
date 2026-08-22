@@ -8,7 +8,7 @@ import { corpusFiles, describeCorpus, describeErrors, DOC_DIRS, SCHEMA_DIRS } fr
 /**
  * Writer regression (what the old `src/test.ts` used to check by hand): writing a
  * parsed document and parsing it again must neither lose nor change anything. It is
- * tried with both indentation styles, over the whole stxt-web corpus.
+ * tried with both indentation styles, over the whole stxt-lang corpus.
  */
 describeCorpus("NodeWriter: round trip", root => {
 	const files = [...corpusFiles(root, SCHEMA_DIRS), ...corpusFiles(root, DOC_DIRS)];

@@ -5,13 +5,13 @@ import { UnifiedSchemaProvider } from "../runtime/UnifiedSchemaProvider";
 import { corpusFiles, describeCorpus, SCHEMA_DIRS } from "./corpus";
 
 /**
- * Loading regression: every real schema and template of stxt-web must parse,
+ * Loading regression: every real schema and template of stxt-lang must parse,
  * validate against its meta-schema and be transformed into a Schema without exception.
  *
  * Each file is loaded into a provider of its own so that a failure points at the
  * guilty file instead of being masked by the others.
  */
-describeCorpus("Schemas and templates of stxt-web", root => {
+describeCorpus("Schemas and templates of stxt-lang", root => {
 	const files = corpusFiles(root, SCHEMA_DIRS);
 
 	it("the corpus is not empty", () => {

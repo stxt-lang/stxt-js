@@ -5,12 +5,12 @@ import { Parser } from "../core/Parser";
 import { corpusFiles, describeCorpus, describeErrors, DOC_DIRS, loadProvider, parseWithSchemas } from "./corpus";
 
 /**
- * Validation regression: the real documents of stxt-web must parse with no errors
- * and validate with no warnings against the schemas/templates of stxt-web itself.
+ * Validation regression: the real documents of stxt-lang must parse with no errors
+ * and validate with no warnings against the schemas/templates of stxt-lang itself.
  *
  * This is the check that used to be done by hand after every conformance change.
  */
-describeCorpus("Documents of stxt-web", root => {
+describeCorpus("Documents of stxt-lang", root => {
 	const provider = loadProvider(root);
 	const files = corpusFiles(root, DOC_DIRS);
 
@@ -48,7 +48,7 @@ describeCorpus("Documents of stxt-web", root => {
 });
 
 /**
- * One same namespace is described twice in stxt-web: as a schema and as a template.
+ * One same namespace is described twice in stxt-lang: as a schema and as a template.
  * Since the template is compiled into a Schema, both must validate the documents
  * exactly the same way.
  *

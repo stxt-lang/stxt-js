@@ -228,7 +228,7 @@ describe("Formatter", () => {
 });
 
 /**
- * Over the whole stxt-web corpus, in both styles: the formatted document parses, has the same
+ * Over the whole stxt-lang corpus, in both styles: the formatted document parses, has the same
  * canonical tree as the source, keeps every comment line, and formatting it again changes
  * nothing.
  */

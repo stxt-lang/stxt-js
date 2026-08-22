@@ -10,7 +10,7 @@ import { corpusFiles, describeCorpus, describeErrors, parseWithSchemas } from ".
 /**
  * The examples of the portal check themselves.
  *
- * Every page of `stxt-web/{es,en}` is a `dev.stxt.website` document whose `Code` blocks
+ * Every page of `stxt-lang/{es,en}` is a `dev.stxt.website` document whose `Code` blocks
  * are, by contract, valid STXT (anything else goes to `Listing`). This suite enforces it:
  *
  * - Every `Code` block must parse with no errors.
@@ -121,7 +121,7 @@ function closestDefinition(definitions: readonly Definition[], namespace: string
 	return before.length > 0 ? before[before.length - 1] : candidates.find(definition => definition.position > position);
 }
 
-describeCorpus("Examples of the portal (stxt-web/{es,en})", root => {
+describeCorpus("Examples of the portal (stxt-lang/{es,en})", root => {
 	const pages = corpusFiles(root, PAGE_DIRS);
 	let validated = 0;
 
