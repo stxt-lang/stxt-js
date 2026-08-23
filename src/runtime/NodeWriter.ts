@@ -50,7 +50,7 @@ export class NodeWriter {
 	 * STXT-TREE-SPEC 11.1.
 	 *
 	 * @param parentNs effective namespace of the parent, "" for a root: the namespace is
-	 *        declared only where it changes (rule 3), wherever the source declared it.
+	 *        written only where it changes (rule 3), regardless of where the source declared it.
 	 */
 	private static writeNode(out: string[], n: Node, depth: number, style: IndentStyle, parentNs: string): void {
 		NodeWriter.indent(out, depth, style);

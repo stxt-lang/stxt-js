@@ -20,7 +20,8 @@
     "!out/**/*.js.map"
   ],
   "scripts": {
-    "build": "tsc",
+    "clean": "node -e \"require('node:fs').rmSync('out', { recursive: true, force: true })\"",
+    "build": "npm run clean && tsc",
     "watch": "tsc --watch",
     "lint": "eslint src --ext .ts",
     "prepare": "npm run build",
