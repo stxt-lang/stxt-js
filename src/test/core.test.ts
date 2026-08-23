@@ -52,7 +52,7 @@ describe("Core conformance regressions", () => {
 		const codes = (text: string) => new Parser().parseResult(text).getErrors().map(e => e.code);
 
 		assert.deepStrictEqual(codes("Root:\n\tBody >>\n\t\tfirst\n\t# oops\n\t\tsecond\n"), ["INDENTATION_LEVEL_NOT_VALID"]);
-		assert.deepStrictEqual(codes("Body >>\n\tfirst\n# oops\n\tsecond\n"), ["INVALID_LINE"]);
+		assert.deepStrictEqual(codes("Body >>\n\tfirst\n# oops\n\tsecond\n"), ["INDENTATION_LEVEL_NOT_VALID"]);
 	});
 
 	it("validates the indentation of a comment like a node's (spec 9 and 11, 0.9.0)", () => {

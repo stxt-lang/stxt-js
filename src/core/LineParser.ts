@@ -16,7 +16,7 @@ import { Line } from "./Line";
  *
  * @param line source line, with its indentation.
  * @param lastNodeBlock true if the node currently open is a BLOCK text node.
- * @param lastLevel indentation level of the node currently open.
+ * @param lastLevel indentation level of the node currently open, -1 when there is none.
  * @param numLine line number, for the error messages.
  * @param validate false to split the line without enforcing the indentation rules.
  * @returns the line already split into indentation and content.

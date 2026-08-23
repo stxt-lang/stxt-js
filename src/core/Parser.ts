@@ -100,7 +100,9 @@ export class Parser {
 		try {
 			const lastNode: Node | null = stack.length === 0 ? null : stack[stack.length - 1];
 			// The stack holds the open nodes, one per level: its size is the level of the next line's parent
-			const lastLevel = lastNode ? stack.length - 1 : 0;
+			// With no open node the reference level is -1 (spec 8.3): the first line of the
+			// document, and the first after every node has been closed, must be at level 0.
+			const lastLevel = lastNode ? stack.length - 1 : -1;
 			const lastNodeText = lastNode instanceof TextNode;
 
 			// Parse the line
