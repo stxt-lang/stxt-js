@@ -194,6 +194,11 @@ describe("Formatter", () => {
 			assert.strictEqual(format(""), "");
 		});
 
+		it("removes an initial BOM (STXT-TREE-SPEC 12.1)", () => {
+			assert.strictEqual(format("\uFEFFDoc: x\n"), "Doc: x\n");
+			assert.strictEqual(format("\uFEFF# comment\nDoc: x\n"), "# comment\nDoc: x\n");
+		});
+
 		it("produces the same canonical tree", () => {
 			assert.strictEqual(canonical(format(MESSY)), canonical(MESSY));
 			assert.strictEqual(canonical(format(MESSY, SPACES_4)), canonical(MESSY));

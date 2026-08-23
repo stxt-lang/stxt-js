@@ -55,8 +55,9 @@ export interface FormatResult {
  *   new style; the remainder only survives in documents with errors, which this conversion
  *   neither repairs nor hides.
  *
- * The result is idempotent, round-trips between the two styles, and produces the same canonical
- * tree (STXT-TREE-SPEC) as the source. The document is parsed without any schema: formatting
+ * These are the rules of STXT-TREE-SPEC 12 (`stxt-impl/core/formatter.txt`). The result is
+ * idempotent, round-trips between the two styles, and produces the same canonical tree as the
+ * source; an initial BOM is removed. The document is parsed without any schema: formatting
  * has nothing to do with validation.
  */
 export class Formatter {
@@ -70,6 +71,10 @@ export class Formatter {
 	 * @returns the formatted text and the syntax errors found; see {@link FormatResult}.
 	 */
 	static format(text: string, style: IndentStyle = IndentStyle.TABS): FormatResult {
+		// STXT-TREE-SPEC 12.1: an initial BOM is not kept
+		if (text.startsWith("\uFEFF")) {
+			text = text.substring(1);
+		}
 		const sourceLines = new SourceLines();
 		const parser = new Parser();
 		parser.registerObserver(sourceLines);

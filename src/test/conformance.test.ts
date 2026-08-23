@@ -9,6 +9,8 @@ import { SchemaProviderMemory } from "../schema/SchemaProviderMemory";
 import { SchemaValidator } from "../schema/SchemaValidator";
 import { TemplateSchemaProviderMemory } from "../template/TemplateSchemaProviderMemory";
 import { DiscoveryResolver } from "../discovery/DiscoveryResolver";
+import { IndentStyle, NodeWriter } from "../runtime/NodeWriter";
+import { Formatter } from "../runtime/Formatter";
 import { MemoryFileSystem, TestEnvironment } from "./discoveryMemory";
 import { toCanonicalJson } from "../runtime/TreeJson";
 import { describeCorpus } from "./corpus";
@@ -29,6 +31,10 @@ import { describeCorpus } from "./corpus";
  *   code and line (STXT-SCHEMA-SPEC 13.1, STXT-TEMPLATE-SPEC 14.1).
  * - `discovery`: a virtual file system and environment resolve to the expected chain, active
  *   definitions and resolution errors (STXT-DISCOVERY-SPEC).
+ * - `writer`: the root nodes of the input, written in canonical text form, equal the expected
+ *   text in both styles (STXT-TREE-SPEC 11).
+ * - `format`: the input reformatted equals the expected text in both styles, with the expected
+ *   syntax errors (STXT-TREE-SPEC 12).
  */
 interface Manifest {
 	kit: string;
@@ -50,7 +56,10 @@ interface Case {
 	documentDir?: string | null;
 	environment?: { stxtPath: string[] | null; userDir: string | null; systemDir: string | null };
 	expected?: any;
+	errors?: { code: string; line: number }[];
 }
+
+const STYLES: [string, IndentStyle][] = [["tabs", IndentStyle.TABS], ["spaces", IndentStyle.SPACES_4]];
 
 interface ExpectedError { code: string; file?: string; namespace?: string }
 
@@ -118,8 +127,8 @@ describeCorpus("Conformance kit", root => {
 		const ids = manifest.cases.map(c => c.id);
 		assert.deepStrictEqual(ids, [...new Set(ids)], "duplicate case ids");
 		const listed = new Set(manifest.cases.map(c => c.input));
-		for (const sub of ["tree", "parse", "validate", "definition-errors"]) {
-			for (const file of fs.readdirSync(path.join(directory, sub)).filter(f => f.endsWith(".stxt"))) {
+		for (const sub of ["tree", "parse", "validate", "definition-errors", "format"]) {
+			for (const file of fs.readdirSync(path.join(directory, sub)).filter(f => f.endsWith(".stxt") && !/\.(tabs|spaces)\.stxt$/.test(f))) {
 				assert.ok(listed.has(`${sub}/${file}`), `${sub}/${file} is not in the manifest`);
 			}
 		}
@@ -178,6 +187,21 @@ describeCorpus("Conformance kit", root => {
 						const where = `${c.id} with [${set.join(", ")}]`;
 						if (c.category === "validate") assert.strictEqual(actual, undefined, `${where}: ${JSON.stringify(actual)}`);
 						else assert.deepStrictEqual(actual, c.error, where);
+					}
+					break;
+				}
+				case "writer": {
+					const nodes = new Parser().parse(input);
+					for (const [key, style] of STYLES) {
+						assert.strictEqual(NodeWriter.toSTXTDocs(nodes, style), read(c.expected[key]), `${c.id}: ${key}`);
+					}
+					break;
+				}
+				case "format": {
+					for (const [key, style] of STYLES) {
+						const result = Formatter.format(input, style);
+						assert.strictEqual(result.text, read(c.expected[key]), `${c.id}: ${key}`);
+						assert.deepStrictEqual(result.errors.map(e => ({ code: e.code, line: e.line })), c.errors, `${c.id}: errors with ${key}`);
 					}
 					break;
 				}

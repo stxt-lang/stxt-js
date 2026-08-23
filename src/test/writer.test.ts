@@ -2,6 +2,7 @@ import * as assert from "assert";
 import * as fs from "fs";
 import * as path from "path";
 import { Parser } from "../core/Parser";
+import { InlineNode } from "../core/InlineNode";
 import { IndentStyle, NodeWriter } from "../runtime/NodeWriter";
 import { corpusFiles, describeCorpus, describeErrors, DOC_DIRS, SCHEMA_DIRS } from "./corpus";
 
@@ -38,4 +39,25 @@ describeCorpus("NodeWriter: round trip", root => {
 			}
 		});
 	}
+});
+
+describe("Canonical text form (STXT-TREE-SPEC 11.1)", () => {
+	it("declares the namespace only where it changes from the parent's, wherever the source declared it", () => {
+		const source = "Root (COM.A):\n\tChild (com.a): x\n\tOther (com.b): y\n\t\tDeep (com.b): z\n\t\tBack (com.a): w\nPlain: v\n";
+		const nodes = new Parser().parse(source);
+
+		assert.strictEqual(NodeWriter.toSTXTDocs(nodes),
+			"Root (com.a):\n\tChild: x\n\tOther (com.b): y\n\t\tDeep: z\n\t\tBack (com.a): w\n\nPlain: v\n");
+	});
+
+	it("writes a subtree as a root: its namespace is declared when not empty", () => {
+		const root = new Parser().parse("Root (com.a):\n\tChild: x\n")[0] as InlineNode;
+		assert.strictEqual(NodeWriter.toSTXT(root.getChildren()[0]), "Child (com.a): x\n");
+	});
+
+	it("writes an empty block line as the indentation alone, and ends every line with LF", () => {
+		const nodes = new Parser().parse("Doc:\n\tBody >>\n\t\tfirst\n\n\t\tlast\n\t\t\n");
+		assert.strictEqual(NodeWriter.toSTXTDocs(nodes, IndentStyle.SPACES_4),
+			"Doc:\n    Body >>\n        first\n        \n        last\n        \n");
+	});
 });

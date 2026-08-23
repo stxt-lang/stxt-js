@@ -23,7 +23,7 @@ export class NodeWriter {
 	 */
 	static toSTXT(node: Node, style: IndentStyle = IndentStyle.TABS): string {
 		const out: string[] = [];
-		NodeWriter.writeNode(out, node, 0, style);
+		NodeWriter.writeNode(out, node, 0, style, "");
 		return out.join("");
 	}
 
@@ -40,20 +40,25 @@ export class NodeWriter {
 			if (i > 0) {
 				out.push("\n");
 			}
-			NodeWriter.writeNode(out, docs[i], 0, style);
+			NodeWriter.writeNode(out, docs[i], 0, style, "");
 		}
 		return out.join("");
 	}
 
-	private static writeNode(out: string[], n: Node, depth: number, style: IndentStyle): void {
+	/**
+	 * Writes one node and, recursively, its children, in the canonical text form of
+	 * STXT-TREE-SPEC 11.1.
+	 *
+	 * @param parentNs effective namespace of the parent, "" for a root: the namespace is
+	 *        declared only where it changes (rule 3), wherever the source declared it.
+	 */
+	private static writeNode(out: string[], n: Node, depth: number, style: IndentStyle, parentNs: string): void {
 		NodeWriter.indent(out, depth, style);
 
-		// The namespace is written where the node declares it; inherited ones are implicit,
-		// exactly as in the source (the effective namespace is the same either way)
-		const ns = n.getDeclaredNamespace();
+		const ns = n.getNamespace();
 
 		out.push(n.getName());
-		if (ns.length > 0) {
+		if (ns !== parentNs) {
 			 out.push(" (", ns, ")");
 		}
 
@@ -73,7 +78,7 @@ export class NodeWriter {
 			out.push("\n");
 
 			for (const child of n.getChildren()) {
-				NodeWriter.writeNode(out, child, depth + 1, style);
+				NodeWriter.writeNode(out, child, depth + 1, style, ns);
 			}
 		}
 	}
