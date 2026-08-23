@@ -103,6 +103,17 @@ describeCorpus("Conformance kit", root => {
 		assert.ok(manifest.cases.length > 0);
 	});
 
+	it("declares cumulative profiles that cover every category", () => {
+		const profiles: Record<string, any> = (manifest as any).profiles;
+		const covered = new Set<string>();
+		for (const [name, p] of Object.entries(profiles)) {
+			if (p.includes) assert.ok(profiles[p.includes], `profile ${name} includes unknown profile ${p.includes}`);
+			for (const s of p.specifications) assert.ok(manifest.specifications[s], `profile ${name}: unknown specification ${s}`);
+			p.categories.forEach((c: string) => covered.add(c));
+		}
+		for (const c of new Set(manifest.cases.map(c => c.category))) assert.ok(covered.has(c), `category ${c} belongs to no profile`);
+	});
+
 	it("lists every case file, and every case exactly once", () => {
 		const ids = manifest.cases.map(c => c.id);
 		assert.deepStrictEqual(ids, [...new Set(ids)], "duplicate case ids");
