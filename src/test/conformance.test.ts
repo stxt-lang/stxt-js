@@ -8,6 +8,8 @@ import { SchemaProvider } from "../schema/SchemaProvider";
 import { SchemaProviderMemory } from "../schema/SchemaProviderMemory";
 import { SchemaValidator } from "../schema/SchemaValidator";
 import { TemplateSchemaProviderMemory } from "../template/TemplateSchemaProviderMemory";
+import { DiscoveryResolver } from "../discovery/DiscoveryResolver";
+import { MemoryFileSystem, TestEnvironment } from "./discoveryMemory";
 import { toCanonicalJson } from "../runtime/TreeJson";
 import { describeCorpus } from "./corpus";
 
@@ -25,6 +27,8 @@ import { describeCorpus } from "./corpus";
  *   expected code and line (STXT-SCHEMA-SPEC 13.1).
  * - `definition-error`: loading the input as a schema or a template fails with the expected
  *   code and line (STXT-SCHEMA-SPEC 13.1, STXT-TEMPLATE-SPEC 14.1).
+ * - `discovery`: a virtual file system and environment resolve to the expected chain, active
+ *   definitions and resolution errors (STXT-DISCOVERY-SPEC).
  */
 interface Manifest {
 	kit: string;
@@ -38,11 +42,17 @@ interface Case {
 	spec: string;
 	description: string;
 	input: string;
-	expected?: string;
 	error?: { code: string; line: number };
 	definitions?: string[][];
 	kind?: string;
+	files?: Record<string, string>;
+	dirs?: string[];
+	documentDir?: string | null;
+	environment?: { stxtPath: string[] | null; userDir: string | null; systemDir: string | null };
+	expected?: any;
 }
+
+interface ExpectedError { code: string; file?: string; namespace?: string }
 
 type Failure = { code: string; line: number };
 
@@ -105,13 +115,36 @@ describeCorpus("Conformance kit", root => {
 	});
 
 	for (const c of manifest.cases) {
-		it(`${c.id}: ${c.description}`, () => {
+		it(`${c.id}: ${c.description}`, async () => {
+			if (c.category === "discovery") {
+				const mounted: Record<string, string> = {};
+				for (const [virtual, real] of Object.entries(c.files!)) mounted[virtual] = read(real);
+				const fs = new MemoryFileSystem(mounted);
+				for (const dir of c.dirs ?? []) fs.addEmptyDir(dir);
+				const env = new TestEnvironment(c.environment!.stxtPath, c.environment!.userDir, c.environment!.systemDir);
+				const result = await new DiscoveryResolver(fs, env).resolve(c.documentDir ?? null);
+
+				assert.deepStrictEqual([...result.getChain()], c.expected.chain, `${c.id}: chain`);
+				for (const [namespace, file] of Object.entries<string | null>(c.expected.active)) {
+					assert.strictEqual(result.getDefinition(namespace)?.file ?? null, file, `${c.id}: active definition of ${namespace}`);
+					assert.strictEqual(result.getSchema(namespace) ? true : false, file !== null, `${c.id}: getSchema(${namespace})`);
+				}
+				const actual = result.getErrors().map(e => ({ code: e.code, file: e.file, namespace: e.namespace }));
+				const expected: ExpectedError[] = c.expected.errors;
+				assert.strictEqual(actual.length, expected.length, `${c.id}: errors ${JSON.stringify(actual)}`);
+				for (const e of expected) {
+					const i = actual.findIndex(a => a.code === e.code && (e.file === undefined || a.file === e.file) && (e.namespace === undefined || a.namespace === e.namespace));
+					assert.ok(i >= 0, `${c.id}: missing error ${JSON.stringify(e)} in ${JSON.stringify(actual)}`);
+					actual.splice(i, 1);
+				}
+				return;
+			}
 			const input = read(c.input);
 			switch (c.category) {
 				case "tree": {
 					const nodes = new Parser().parse(input);
 					const actual = JSON.parse(toCanonicalJson(nodes));
-					assert.deepStrictEqual(actual, JSON.parse(read(c.expected!)));
+					assert.deepStrictEqual(actual, JSON.parse(read(c.expected)));
 					break;
 				}
 				case "parse-error": {
