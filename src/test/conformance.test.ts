@@ -70,9 +70,13 @@ function loadDefinitions(read: (file: string) => string, files: string[]): Schem
 	const schemas = new SchemaProviderMemory();
 	const templates = new TemplateSchemaProviderMemory(schemas);
 	for (const file of files) {
-		if (file.endsWith(".schema.stxt")) schemas.addSchema(read(file));
-		else if (file.endsWith(".template.stxt")) templates.addTemplate(read(file));
-		else assert.fail(`${file}: a definition file must end in .schema.stxt or .template.stxt`);
+		if (file.endsWith(".schema.stxt")) {
+			schemas.addSchema(read(file));
+		} else if (file.endsWith(".template.stxt")) {
+			templates.addTemplate(read(file));
+		} else {
+			assert.fail(`${file}: a definition file must end in .schema.stxt or .template.stxt`);
+		}
 	}
 	return templates;
 }
@@ -82,7 +86,9 @@ function firstValidationError(text: string, provider: SchemaProvider): Failure |
 	const validator = new SchemaValidator(provider, true);
 	for (const node of new Parser().parse(text)) {
 		const errors = validator.validate(node);
-		if (errors.length > 0) return { code: errors[0].code, line: errors[0].line };
+		if (errors.length > 0) {
+			return { code: errors[0].code, line: errors[0].line };
+		}
 	}
 	return undefined;
 }
@@ -92,7 +98,9 @@ function failure(fn: () => unknown): Failure | undefined {
 	try {
 		fn();
 	} catch (e) {
-		if (e instanceof ValidationException || e instanceof ParseException) return { code: e.code, line: e.line };
+		if (e instanceof ValidationException || e instanceof ParseException) {
+			return { code: e.code, line: e.line };
+		}
 		throw e;
 	}
 	return undefined;
@@ -116,11 +124,17 @@ describeCorpus("Conformance kit", root => {
 		const profiles: Record<string, any> = (manifest as any).profiles;
 		const covered = new Set<string>();
 		for (const [name, p] of Object.entries(profiles)) {
-			if (p.includes) assert.ok(profiles[p.includes], `profile ${name} includes unknown profile ${p.includes}`);
-			for (const s of p.specifications) assert.ok(manifest.specifications[s], `profile ${name}: unknown specification ${s}`);
+			if (p.includes) {
+				assert.ok(profiles[p.includes], `profile ${name} includes unknown profile ${p.includes}`);
+			}
+			for (const s of p.specifications) {
+				assert.ok(manifest.specifications[s], `profile ${name}: unknown specification ${s}`);
+			}
 			p.categories.forEach((c: string) => covered.add(c));
 		}
-		for (const c of new Set(manifest.cases.map(c => c.category))) assert.ok(covered.has(c), `category ${c} belongs to no profile`);
+		for (const c of new Set(manifest.cases.map(c => c.category))) {
+			assert.ok(covered.has(c), `category ${c} belongs to no profile`);
+		}
 	});
 
 	it("lists every case file, and every case exactly once", () => {
@@ -138,9 +152,13 @@ describeCorpus("Conformance kit", root => {
 		it(`${c.id}: ${c.description}`, async () => {
 			if (c.category === "discovery") {
 				const mounted: Record<string, string> = {};
-				for (const [virtual, real] of Object.entries(c.files!)) mounted[virtual] = read(real);
+				for (const [virtual, real] of Object.entries(c.files!)) {
+					mounted[virtual] = read(real);
+				}
 				const fs = new MemoryFileSystem(mounted);
-				for (const dir of c.dirs ?? []) fs.addEmptyDir(dir);
+				for (const dir of c.dirs ?? []) {
+					fs.addEmptyDir(dir);
+				}
 				const env = new TestEnvironment(c.environment!.stxtPath, c.environment!.userDir, c.environment!.systemDir);
 				const result = await new DiscoveryResolver(fs, env).resolve(c.documentDir ?? null);
 
@@ -172,7 +190,9 @@ describeCorpus("Conformance kit", root => {
 					try {
 						new Parser().parse(input);
 					} catch (e) {
-						if (!(e instanceof ParseException)) throw e;
+						if (!(e instanceof ParseException)) {
+							throw e;
+						}
 						error = e;
 					}
 					assert.ok(error, `${c.id}: parsed without errors, expected ${c.error!.code}`);
@@ -185,8 +205,11 @@ describeCorpus("Conformance kit", root => {
 						const provider = loadDefinitions(read, set);
 						const actual = firstValidationError(input, provider);
 						const where = `${c.id} with [${set.join(", ")}]`;
-						if (c.category === "validate") assert.strictEqual(actual, undefined, `${where}: ${JSON.stringify(actual)}`);
-						else assert.deepStrictEqual(actual, c.error, where);
+						if (c.category === "validate") {
+							assert.strictEqual(actual, undefined, `${where}: ${JSON.stringify(actual)}`);
+						} else {
+							assert.deepStrictEqual(actual, c.error, where);
+						}
 					}
 					break;
 				}
