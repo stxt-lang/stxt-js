@@ -22,4 +22,19 @@ export class Constants {
 	static readonly SEP_TEXT_NODE: string = ">>";
 	/** Namespace of a node that declares none and inherits none. */
 	static readonly EMPTY_NAMESPACE: string = "";
+	/**
+	 * Default maximum open nesting levels (STXT-SPEC §11.2); level 0 is the first. Configure it
+	 * per parser with {@link ParserOptions.maxNesting}; -1 disables the limit.
+	 */
+	static readonly DEFAULT_MAX_NESTING: number = 100;
+	/**
+	 * Default maximum length of one input line, indentation included (STXT-SPEC §11.2).
+	 * Configure it per parser with {@link ParserOptions.maxLineLength}; -1 disables the limit.
+	 */
+	static readonly DEFAULT_MAX_LINE_LENGTH: number = 10000;
+	/**
+	 * Default maximum total input consumed (STXT-SPEC §11.2). Configure it per parser with
+	 * {@link ParserOptions.maxInputSize}; -1 disables the limit.
+	 */
+	static readonly DEFAULT_MAX_INPUT_SIZE: number = 10000000;
 }

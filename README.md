@@ -281,6 +281,33 @@ parser.registerObserver(new LoggingObserver());
 parser.parseResult(text);
 ```
 
+`StreamObserver` watches the results instead of the process: each completed root node and each
+error, in every mode. With `parseStream` the parser retains nothing — no nodes, no errors — so a
+file larger than memory can be processed one root tree at a time:
+
+```ts
+import { Parser, StreamObserver, Node, ParseException } from '@stxt-lang/core';
+
+const parser = new Parser();
+parser.registerStreamObserver({
+    onRootNode(node: Node): void { handle(node); },       // one complete root at a time
+    onError(error: ParseException): void { report(error); },
+} satisfies StreamObserver);
+parser.parseStream(readLinesLazily(file));  // any Iterable<string> of lines
+```
+
+## Parser limits
+
+The parser rejects hostile or runaway inputs by default (STXT-SPEC §11.2): documents nesting
+more than 100 levels, lines longer than 10 000 characters, or inputs over 10 000 000
+characters. A limit error is a `LimitException` (`LIMIT_NESTING_EXCEEDED`,
+`LIMIT_LINE_LENGTH_EXCEEDED`, `LIMIT_INPUT_SIZE_EXCEEDED`) and aborts the parse: it is always
+the last error reported. Each limit is configurable per parser; `-1` disables it:
+
+```ts
+const parser = new Parser({ maxNesting: 500, maxInputSize: -1 });
+```
+
 ## Writing STXT back out
 
 ```ts
@@ -311,9 +338,9 @@ if (errors.length === 0) {
 
 Everything importable from the package:
 
-- **Parsing** — `Node`, `InlineNode`, `TextNode`, `Parser`, `ParseResult`, `Line`, `Constants`, `parseLine`, `StringUtils`
-- **Exceptions** — `ParseException`, `ValidationException`, `RuntimeException`
-- **Extension points** — `Observer`, `Validator`
+- **Parsing** — `Node`, `InlineNode`, `TextNode`, `Parser`, `ParserOptions`, `ParseResult`, `Line`, `Constants`, `parseLine`, `StringUtils`
+- **Exceptions** — `ParseException`, `ValidationException`, `LimitException`, `RuntimeException`
+- **Extension points** — `Observer`, `StreamObserver`, `Validator`
 - **Schemas** — `Schema`, `SchemaValidator`, `SchemaProvider`, `SchemaProviderMemory`, `SchemaProviderMeta`, `NodeDefinition`, `ChildDefinition`, `TypeRegistry`, `Type`, `transformNodeToSchema`
 - **Templates** — `transformTemplateNodeToSchema`, `TEMPLATE_NAMESPACE`, `TemplateSchemaProviderMemory`, `MetaTemplateSchemaProvider`
 - **Runtime** — `UnifiedSchemaProvider`, `NodeWriter`, `IndentStyle`, `Formatter`, `FormatResult`, `toCanonicalTree`, `toCanonicalJson`

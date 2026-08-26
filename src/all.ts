@@ -5,7 +5,7 @@
 export { Node } from "./core/Node";
 export { InlineNode } from "./core/InlineNode";
 export { TextNode } from "./core/TextNode";
-export { Parser } from "./core/Parser";
+export { Parser, ParserOptions } from "./core/Parser";
 export { ParseResult } from "./core/ParseResult";
 export { Line } from "./core/Line";
 export { Constants } from "./core/Constants";
@@ -21,9 +21,11 @@ export { StringUtils } from "./core/StringUtils";
 
 export { ParseException } from "./exceptions/ParseException";
 export { ValidationException } from "./exceptions/ValidationException";
+export { LimitException } from "./exceptions/LimitException";
 export { RuntimeException } from "./exceptions/RuntimeException";
 
 export { Observer } from "./processors/Observer";
+export { StreamObserver } from "./processors/StreamObserver";
 export { Validator } from "./processors/Validator";
 
 export { Schema } from "./schema/Schema";
