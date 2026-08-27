@@ -1,7 +1,7 @@
 import { Line } from "../core/Line";
 import { InlineNode } from "../core/InlineNode";
 import { Node } from "../core/Node";
-import { Parser } from "../core/Parser";
+import { Parser, ParserOptions } from "../core/Parser";
 import { StringUtils } from "../core/StringUtils";
 import { TextNode } from "../core/TextNode";
 import { ParseException } from "../exceptions/ParseException";
@@ -68,15 +68,19 @@ export class Formatter {
 	 *
 	 * @param text the document.
 	 * @param style indentation style to format with; tabs by default.
+	 * @param options limits for the internal parser (STXT-SPEC 11.2); every omitted one keeps
+	 *                its recommended default, and -1 disables one. A limit exceeded shows up in
+	 *                the errors like any other syntax error, and the lines the aborted parse
+	 *                never described are converted as "other lines" (indentation units only).
 	 * @returns the formatted text and the syntax errors found; see {@link FormatResult}.
 	 */
-	static format(text: string, style: IndentStyle = IndentStyle.TABS): FormatResult {
+	static format(text: string, style: IndentStyle = IndentStyle.TABS, options?: ParserOptions): FormatResult {
 		// STXT-TREE-SPEC 12.1: an initial BOM is not kept
 		if (text.startsWith("\uFEFF")) {
 			text = text.substring(1);
 		}
 		const sourceLines = new SourceLines();
-		const parser = new Parser();
+		const parser = new Parser(options);
 		parser.registerObserver(sourceLines);
 		const result = parser.parseResult(text);
 

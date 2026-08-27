@@ -266,3 +266,36 @@ describeCorpus("Formatter: corpus", root => {
 		});
 	}
 });
+
+describe("Formatter parser options (STXT-SPEC 11.2)", () => {
+
+	it("applies the default limits: a line over 10000 characters is a limit error", () => {
+		const result = Formatter.format("Name: " + "x".repeat(10000) + "\n");
+
+		assert.strictEqual(result.errors.length, 1);
+		assert.strictEqual(result.errors[0].code, "LIMIT_LINE_LENGTH_EXCEEDED");
+	});
+
+	it("takes options: -1 disables a limit and the long line formats", () => {
+		const text = "Name: " + "x".repeat(10000) + "\n";
+		const result = Formatter.format(text, IndentStyle.TABS, { maxLineLength: -1 });
+
+		assert.strictEqual(result.errors.length, 0);
+		assert.strictEqual(result.text, text);
+	});
+
+	it("keeps the lines after an abort untouched but unit-converted, like any undescribed line", () => {
+		const text = "A: 1\n    B: " + "y".repeat(30) + "\n    C: 3\n";
+		const result = Formatter.format(text, IndentStyle.TABS, { maxLineLength: 20 });
+
+		assert.strictEqual(result.errors.length, 1);
+		assert.strictEqual(result.errors[0].code, "LIMIT_LINE_LENGTH_EXCEEDED");
+		// A: 1 was described before the abort; B and C were not: units converted, nothing else
+		assert.deepStrictEqual(result.text.split("\n"), [
+			"A: 1",
+			"\tB: " + "y".repeat(30),
+			"\tC: 3",
+			"",
+		]);
+	});
+});

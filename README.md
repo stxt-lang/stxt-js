@@ -334,6 +334,10 @@ if (errors.length === 0) {
 }
 ```
 
+`Formatter.format` takes the same limits as the parser as an optional third argument —
+`Formatter.format(source, IndentStyle.TABS, { maxInputSize: -1 })` — since formatting parses
+the document with them (STXT-SPEC §11.2).
+
 ## API surface
 
 Everything importable from the package:
