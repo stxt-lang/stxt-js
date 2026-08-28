@@ -316,6 +316,14 @@ export class Parser {
 		while (stack.length > targetLevel) {
 			const completed = stack.pop()!;
 
+			// A closing block node drops its final empty lines (STXT-SPEC §10.3): they are not
+			// content, only visual separation or an editor's final line breaks. The validators
+			// and observers below already see the trimmed node; onTextLine did fire for these
+			// lines while the block was open, as process observation of the source.
+			if (completed instanceof TextNode) {
+				completed.removeTrailingEmptyLines();
+			}
+
 			// Hand it over to the validators
 			this.validators.forEach(validator => {
 				try {

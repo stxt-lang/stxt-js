@@ -91,6 +91,46 @@ describe("Core conformance regressions", () => {
 	});
 });
 
+describe("Final empty lines of a block (STXT-SPEC 10.3, 0.15.0)", () => {
+	const lines = (text: string) => [...(new Parser().parse(text)[0] as TextNode).getTextLines()];
+
+	it("drops the final empty lines at EOF, whatever the final line breaks", () => {
+		assert.deepStrictEqual(lines("B >>\n\ttext"), ["text"]);
+		assert.deepStrictEqual(lines("B >>\n\ttext\n"), ["text"]);
+		assert.deepStrictEqual(lines("B >>\n\ttext\n\n"), ["text"]);
+		assert.deepStrictEqual(lines("B >>\n\ttext\n\n\t\t\n\n"), ["text"]);
+	});
+
+	it("drops the final empty lines when a shallower line closes the block", () => {
+		const roots = new Parser().parse("B >>\n\ttext\n\n\t\nC: x\n");
+		assert.deepStrictEqual([...(roots[0] as TextNode).getTextLines()], ["text"]);
+		assert.strictEqual(roots[1].getName(), "C");
+	});
+
+	it("keeps leading and intermediate empty lines", () => {
+		assert.deepStrictEqual(lines("B >>\n\n\ttext\n\n\tmore\n\n"), ["", "text", "", "more"]);
+	});
+
+	it("a block of only empty lines is as empty as a block with no lines", () => {
+		assert.deepStrictEqual(lines("B >>\n"), []);
+		assert.deepStrictEqual(lines("B >>\n\t\n"), []);
+		assert.deepStrictEqual(lines("B >>\n\n\n"), []);
+	});
+
+	it("still notifies the observers of every physical line of the block", () => {
+		let textLines = 0;
+		const parser = new Parser();
+		parser.registerObserver({
+			onCreate: () => { /* not needed */ },
+			onFinish: () => { /* not needed */ },
+			onComment: () => { /* not needed */ },
+			onTextLine: () => { textLines++; },
+		});
+		parser.parse("B >>\n\ttext\n\n\n");
+		assert.strictEqual(textLines, 3);
+	});
+});
+
 describe("Blanks are only U+0020 and U+0009 (STXT-SPEC 4)", () => {
 	const codes = (text: string) => new Parser().parseResult(text).getErrors().map((e) => e.code);
 

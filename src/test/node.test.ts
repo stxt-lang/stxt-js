@@ -67,6 +67,20 @@ describe("Node model (0.7.0)", () => {
 		assert.deepStrictEqual([...new TextNode("T", ["l1", "l2"]).getTextLines()], ["l1", "l2"]);
 	});
 
+	it("removeTrailingEmptyLines drops the final empty lines and nothing else", () => {
+		const text = new TextNode("Body", ["", "a", "", "b", "", ""]);
+		text.removeTrailingEmptyLines();
+		assert.deepStrictEqual([...text.getTextLines()], ["", "a", "", "b"]);
+
+		const blank = new TextNode("Blank", ["", ""]);
+		blank.removeTrailingEmptyLines();
+		assert.deepStrictEqual([...blank.getTextLines()], []);
+
+		const empty = new TextNode("Empty");
+		empty.removeTrailingEmptyLines();
+		assert.deepStrictEqual([...empty.getTextLines()], []);
+	});
+
 	// ---------------------------------------------------------------- parent links
 
 	it("addChild links both ends and derives the level", () => {
@@ -272,7 +286,7 @@ describe("Node model (0.7.0)", () => {
 		doc.addInlineNode("From", "ana@example.com");
 		const to = doc.addInlineNode("To");
 		to.addInlineNode("Address", "bob@example.com");
-		doc.addTextNode("Body", "Hi Bob,\n\nSee attached.\n");
+		doc.addTextNode("Body", "Hi Bob,\n\nSee attached.");
 		doc.addInlineNode("Cc", "org.other.ns", "x");
 
 		const written = NodeWriter.toSTXT(doc);

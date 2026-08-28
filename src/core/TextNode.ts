@@ -91,6 +91,18 @@ export class TextNode extends Node {
 		this.lines.length = 0;
 	}
 
+	/**
+	 * Removes the final empty lines (`""` elements at the end of the lines). The {@link Parser}
+	 * calls it when the block closes (STXT-SPEC §10.3: the final empty lines of a block are not
+	 * content); it is public because a programmatically built node may want the same
+	 * normalization before writing.
+	 */
+	removeTrailingEmptyLines(): void {
+		while (this.lines.length > 0 && this.lines[this.lines.length - 1] === "") {
+			this.lines.pop();
+		}
+	}
+
 	getText(): string {
 		return this.lines.join("\n");
 	}

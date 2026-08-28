@@ -48,7 +48,7 @@ const MESSY_TABS = [
 	"\t\tfirst line",
 	"\t\t",
 	"\t\t    indented content",
-	"\t\t",
+	"",
 	"\tAfter (test.fmt): block",
 	"",
 ].join("\n");
@@ -63,7 +63,7 @@ const MESSY_SPACES = [
 	"        first line",
 	"        ",
 	"            indented content",
-	"        ",
+	"",
 	"    After (test.fmt): block",
 	"",
 ].join("\n");
@@ -108,21 +108,23 @@ describe("Formatter", () => {
 			assert.strictEqual(format("Doc >>\n\tuna línea\n\t\tsangrada", SPACES_4), "Doc >>\n    una línea\n    \tsangrada");
 		});
 
-		it("indents the blank lines of a block to the level of the block, trailing ones included", () => {
-			// STXT-SPEC 10.3: a blank line of a block is "" whatever its indentation; blank lines
-			// outside a block have no level and stay empty.
+		it("indents the blank lines of a block before more text; final ones stay plain", () => {
+			// STXT-SPEC 10.3: a blank line before more block text is "" whatever its indentation
+			// and gets the block's indentation; the final blank lines of a block are not content
+			// and stay plain, like blank lines outside a block.
 			assert.strictEqual(format("Doc >>\n\tuna\n\n\t\t\t\n\totra"), "Doc >>\n\tuna\n\t\n\t\n\totra");
 			assert.strictEqual(format("Doc >>\n\tuna\n\n\totra", SPACES_4), "Doc >>\n    una\n    \n    otra");
-			assert.strictEqual(format("Doc >>\n\tuna\n\t\t\t"), "Doc >>\n\tuna\n\t");
+			assert.strictEqual(format("Doc >>\n\tuna\n\t\t\t"), "Doc >>\n\tuna\n");
+			assert.strictEqual(format("Doc >>\n\tuna\n\t\t\t\nOtro: x"), "Doc >>\n\tuna\n\nOtro: x");
 			assert.strictEqual(format("Padre:\n\tHijo: v\n\t\n\tOtro: w"), "Padre:\n\tHijo: v\n\n\tOtro: w");
 		});
 
-		it("keeps the text of the block byte-identical, trailing blank line included", () => {
+		it("keeps the text of the block byte-identical; a final blank line is not content", () => {
 			const text = "Doc >>\n\tuna\n\n\t\t  dos\n\t\t\t";
 			const block = (t: string) => new Parser().parse(t)[0].getText();
 			assert.strictEqual(block(format(text)), block(text));
 			assert.strictEqual(block(format(text, SPACES_4)), block(text));
-			assert.strictEqual(block(text), "una\n\n\t  dos\n");
+			assert.strictEqual(block(text), "una\n\n\t  dos");
 		});
 
 		it("removes the trailing blanks of a text line, as the parser does", () => {

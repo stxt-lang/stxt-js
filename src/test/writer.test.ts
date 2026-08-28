@@ -58,6 +58,14 @@ describe("Canonical text form (STXT-TREE-SPEC 11.1)", () => {
 	it("writes an empty block line as the indentation alone, and ends every line with LF", () => {
 		const nodes = new Parser().parse("Doc:\n\tBody >>\n\t\tfirst\n\n\t\tlast\n\t\t\n");
 		assert.strictEqual(NodeWriter.toSTXTDocs(nodes, IndentStyle.SPACES_4),
-			"Doc:\n    Body >>\n        first\n        \n        last\n        \n");
+			"Doc:\n    Body >>\n        first\n        \n        last\n");
+	});
+
+	it("does not write the final empty lines of a programmatically built block (rule 6)", () => {
+		// Parsing never produces them (STXT-SPEC 10.3); on a built node they would not
+		// survive the round trip, so the writer drops them.
+		const doc = new InlineNode("Doc");
+		doc.addTextNode("Body", ["first", "", "last", "", ""]);
+		assert.strictEqual(NodeWriter.toSTXT(doc), "Doc:\n\tBody >>\n\t\tfirst\n\t\t\n\t\tlast\n");
 	});
 });

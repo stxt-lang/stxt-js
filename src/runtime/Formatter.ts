@@ -41,10 +41,10 @@ export interface FormatResult {
  * - A **text line of a block** gets the indentation of the block (its level plus one) in the
  *   requested style, followed by its content; any indentation the line had beyond the block's
  *   is content (STXT-SPEC §10.2, relative indentation is preserved) and is kept exactly. A
- *   blank line of the block is `""` in the content whatever it looks like in the source
- *   (STXT-SPEC §10.3), so it is written with the indentation of the block too: the block reads
- *   as one piece and, at the end of the file, the line is not lost — an empty last line would
- *   be indistinguishable from the final line ending.
+ *   blank line that precedes more block text is `""` in the content whatever it looks like in
+ *   the source (STXT-SPEC §10.3), so it is written with the indentation of the block too: the
+ *   block reads as one piece. The final blank lines of a block are not content (STXT-SPEC
+ *   §10.3: the parser drops them when the block closes) and fall under the next rule.
  * - Every **other line** — a comment, a blank line outside a block, or a line the parse tree
  *   does not describe because of a syntax error — is kept as the author wrote it, except that
  *   its trailing blanks are removed and the whole indentation units at its start are converted
@@ -108,8 +108,11 @@ export class Formatter {
 			return Formatter.renderNode(node, line, style);
 		}
 
+		// A final empty line of a block is not content (STXT-SPEC §10.3): the parser removed it
+		// from the node when the block closed, so its index falls beyond the logical lines. It
+		// is kept as any other line: blank, unindented.
 		const text = sourceLines.textAt(lineNumber);
-		if (text) {
+		if (text && text.index < text.node.getTextLines().length) {
 			return Formatter.indent(text.node.getLevel() + 1, style) + text.line.content;
 		}
 
@@ -189,7 +192,7 @@ export class Formatter {
  */
 class SourceLines implements Observer {
 	private readonly nodeByLine = new Map<number, Node>();
-	private readonly textByLine = new Map<number, { node: TextNode; line: Line }>();
+	private readonly textByLine = new Map<number, { node: TextNode; line: Line; index: number }>();
 
 	onCreate(node: Node): void {
 		this.nodeByLine.set(node.getLine(), node);
@@ -204,7 +207,10 @@ class SourceLines implements Observer {
 	}
 
 	onTextLine(node: TextNode, lineNumber: number, lineString: string, line: Line): void {
-		this.textByLine.set(lineNumber, { node, line });
+		// The line was just appended: its 0-based index in the block is the current last. After
+		// the block closes and drops its final empty lines (STXT-SPEC §10.3), an index beyond
+		// getTextLines() marks the line as a final empty line, not content.
+		this.textByLine.set(lineNumber, { node, line, index: node.getTextLines().length - 1 });
 	}
 
 	/**
@@ -217,10 +223,11 @@ class SourceLines implements Observer {
 
 	/**
 	 * @param lineNumber line number, 1-indexed.
-	 * @returns the block node this line is text of and the line already split into indentation
-	 *          and content, or undefined if the line is not text of a block.
+	 * @returns the block node this line is text of, the line already split into indentation and
+	 *          content, and its 0-based index in the block; or undefined if the line is not text
+	 *          of a block.
 	 */
-	textAt(lineNumber: number): { node: TextNode; line: Line } | undefined {
+	textAt(lineNumber: number): { node: TextNode; line: Line; index: number } | undefined {
 		return this.textByLine.get(lineNumber);
 	}
 }

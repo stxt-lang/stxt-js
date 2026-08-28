@@ -62,7 +62,7 @@ export function parseLine(line: string, lastNodeBlock: boolean, lastLevel: numbe
 		if (lastNodeBlock && level > lastLevel) {
 			const text = StringUtils.rightTrim(line.substring(pointer + 1));
 			// The prefix covering the block level must be homogeneous (spec 10.2, rule 2);
-			// empty lines are always preserved and are exempt from it (spec 10.3)
+			// empty lines are never an error and are exempt from it (spec 10.3)
 			if (validate && sawSpace && sawTab && text.length > 0) {
 				throw new ParseException(numLine, "INDENTATION_MIXED", `Mixed tabs and spaces in indentation`);
 			}

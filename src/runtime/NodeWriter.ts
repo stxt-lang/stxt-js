@@ -65,9 +65,17 @@ export class NodeWriter {
 		if (n instanceof TextNode) {
 			out.push(" >>\n");
 
-			for (const line of n.getTextLines()) {
+			// Final empty lines are not emitted (STXT-TREE-SPEC 11.1 rule 6): parsing never
+			// produces them (STXT-SPEC 10.3), and on a programmatically built node they would
+			// not survive the round trip.
+			const lines = n.getTextLines();
+			let last = lines.length;
+			while (last > 0 && lines[last - 1] === "") {
+				last--;
+			}
+			for (let i = 0; i < last; i++) {
 				NodeWriter.indent(out, depth + 1, style);
-				out.push(line, "\n");
+				out.push(lines[i], "\n");
 			}
 		} else if (n instanceof InlineNode) {
 			out.push(":");
