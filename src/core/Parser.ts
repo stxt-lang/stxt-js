@@ -313,7 +313,8 @@ export class Parser {
 
 	private closeToLevel(stack: Node[], targetLevel: number, result: ParseResult | null): void {
 		while (stack.length > targetLevel) {
-			const completed = stack.pop()!;
+			const completed = stack[stack.length - 1];
+			stack.pop();
 
 			// A closing block node drops its final empty lines (STXT-SPEC §10.3): they are not
 			// content, only visual separation or an editor's final line breaks. The validators

@@ -148,10 +148,12 @@ export class SchemaValidator implements Validator {
 			const childName = child.getQualifiedName();
 			count.set(childName, (count.get(childName) ?? 0) + 1);
 
-			if (!childrenByType.has(childName)) {
-				childrenByType.set(childName, []);
+			let sameName = childrenByType.get(childName);
+			if (!sameName) {
+				sameName = [];
+				childrenByType.set(childName, sameName);
 			}
-			childrenByType.get(childName)!.push(child);
+			sameName.push(child);
 		}
 
 		for (const childDef of nodeDef.getChildren().values()) {

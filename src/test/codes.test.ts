@@ -269,7 +269,7 @@ describe("SPEC_VERSION", () => {
 		const version = metadata.getChild("Version") as InlineNode | null;
 
 		assert.ok(version, "STXT-SPEC has no Metadata/Version");
-		assert.strictEqual(Constants.SPEC_VERSION, version!.getValue());
+		assert.strictEqual(Constants.SPEC_VERSION, version.getValue());
 	});
 });
 

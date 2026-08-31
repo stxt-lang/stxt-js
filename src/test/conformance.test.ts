@@ -39,27 +39,48 @@ import { describeCorpus } from "./corpus";
 interface Manifest {
 	kit: string;
 	specifications: Record<string, string>;
+	profiles: Record<string, Profile>;
 	cases: Case[];
 }
 
-interface Case {
+interface Profile {
+	includes?: string;
+	specifications: string[];
+	categories: string[];
+}
+
+/** The fields every case shares; what each category adds lives in its variant below. */
+interface CaseBase {
 	id: string;
-	category: string;
 	spec: string;
 	description: string;
 	input: string;
-	error?: { code: string; line: number };
-	definitions?: string[][];
-	kind?: string;
-	files?: Record<string, string>;
-	dirs?: string[];
-	documentDir?: string | null;
-	environment?: { stxtPath: string[] | null; userDir: string | null; systemDir: string | null };
-	expected?: any;
-	errors?: { code: string; line: number }[];
 }
 
-const STYLES: [string, IndentStyle][] = [["tabs", IndentStyle.TABS], ["spaces", IndentStyle.SPACES_4]];
+interface TreeCase extends CaseBase { category: "tree"; expected: string }
+interface ParseErrorCase extends CaseBase { category: "parse-error"; error: Failure }
+interface ValidateCase extends CaseBase { category: "validate"; definitions: string[][] }
+interface ValidateErrorCase extends CaseBase { category: "validate-error"; definitions: string[][]; error: Failure }
+interface DefinitionErrorCase extends CaseBase { category: "definition-error"; kind: string; error: Failure }
+interface WriterCase extends CaseBase { category: "writer"; expected: StyleTexts }
+interface FormatCase extends CaseBase { category: "format"; expected: StyleTexts; errors: Failure[] }
+interface DiscoveryCase extends CaseBase {
+	category: "discovery";
+	files: Record<string, string>;
+	dirs?: string[];
+	documentDir?: string | null;
+	environment: { stxtPath: string[] | null; userDir: string | null; systemDir: string | null };
+	expected: { chain: string[]; active: Record<string, string | null>; errors: ExpectedError[] };
+}
+
+/** Discriminated by `category`, so each branch of the runner sees its fields as required. */
+type Case = TreeCase | ParseErrorCase | ValidateCase | ValidateErrorCase
+	| DefinitionErrorCase | DiscoveryCase | WriterCase | FormatCase;
+
+/** The expected text of a case with one result per indentation style. */
+interface StyleTexts { tabs: string; spaces: string }
+
+const STYLES: [keyof StyleTexts, IndentStyle][] = [["tabs", IndentStyle.TABS], ["spaces", IndentStyle.SPACES_4]];
 
 interface ExpectedError { code: string; file?: string; namespace?: string }
 
@@ -121,7 +142,7 @@ describeCorpus("Conformance kit", root => {
 	});
 
 	it("declares cumulative profiles that cover every category", () => {
-		const profiles: Record<string, any> = (manifest as any).profiles;
+		const profiles = manifest.profiles;
 		const covered = new Set<string>();
 		for (const [name, p] of Object.entries(profiles)) {
 			if (p.includes) {
@@ -130,7 +151,7 @@ describeCorpus("Conformance kit", root => {
 			for (const s of p.specifications) {
 				assert.ok(manifest.specifications[s], `profile ${name}: unknown specification ${s}`);
 			}
-			p.categories.forEach((c: string) => covered.add(c));
+			p.categories.forEach(c => covered.add(c));
 		}
 		for (const c of new Set(manifest.cases.map(c => c.category))) {
 			assert.ok(covered.has(c), `category ${c} belongs to no profile`);
@@ -152,14 +173,14 @@ describeCorpus("Conformance kit", root => {
 		it(`${c.id}: ${c.description}`, async () => {
 			if (c.category === "discovery") {
 				const mounted: Record<string, string> = {};
-				for (const [virtual, real] of Object.entries(c.files!)) {
+				for (const [virtual, real] of Object.entries(c.files)) {
 					mounted[virtual] = read(real);
 				}
 				const fs = new MemoryFileSystem(mounted);
 				for (const dir of c.dirs ?? []) {
 					fs.addEmptyDir(dir);
 				}
-				const env = new TestEnvironment(c.environment!.stxtPath, c.environment!.userDir, c.environment!.systemDir);
+				const env = new TestEnvironment(c.environment.stxtPath, c.environment.userDir, c.environment.systemDir);
 				const result = await new DiscoveryResolver(fs, env).resolve(c.documentDir ?? null);
 
 				assert.deepStrictEqual([...result.getChain()], c.expected.chain, `${c.id}: chain`);
@@ -195,20 +216,19 @@ describeCorpus("Conformance kit", root => {
 						}
 						error = e;
 					}
-					assert.ok(error, `${c.id}: parsed without errors, expected ${c.error!.code}`);
+					assert.ok(error, `${c.id}: parsed without errors, expected ${c.error.code}`);
 					assert.deepStrictEqual({ code: error.code, line: error.line }, c.error);
 					break;
 				}
 				case "validate":
 				case "validate-error": {
-					for (const set of c.definitions!) {
+					for (const set of c.definitions) {
 						const provider = loadDefinitions(read, set);
 						const actual = firstValidationError(input, provider);
-						const where = `${c.id} with [${set.join(", ")}]`;
 						if (c.category === "validate") {
-							assert.strictEqual(actual, undefined, `${where}: ${JSON.stringify(actual)}`);
+							assert.strictEqual(actual, undefined, `${c.id} with [${set.join(", ")}]: ${JSON.stringify(actual)}`);
 						} else {
-							assert.deepStrictEqual(actual, c.error, where);
+							assert.deepStrictEqual(actual, c.error, `${c.id} with [${set.join(", ")}]`);
 						}
 					}
 					break;
@@ -233,8 +253,11 @@ describeCorpus("Conformance kit", root => {
 					assert.deepStrictEqual(actual, c.error, `${c.id}: loaded without errors or with another error`);
 					break;
 				}
-				default:
-					assert.fail(`${c.id}: unknown category ${c.category}`);
+				default: {
+					// Exhaustive over Case, but the manifest is data: report what it says
+					const unknown: CaseBase & { category: string } = c;
+					assert.fail(`${unknown.id}: unknown category ${unknown.category}`);
+				}
 			}
 		});
 	}
