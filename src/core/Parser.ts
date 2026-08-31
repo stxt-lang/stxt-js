@@ -180,14 +180,8 @@ export class Parser {
 				return;
 			}
 
-			try {
-				this.processLine(line, lineNumber, stack, result);
-			} catch (e: unknown) {
-				if (e instanceof LimitException) {
-					this.emitError(e, result);
-					return;
-				}
-				throw e;
+			if (!this.processLine(line, lineNumber, stack, result)) {
+				return; // a limit aborted the parse; its error is already emitted
 			}
 		}
 
@@ -195,7 +189,12 @@ export class Parser {
 		this.closeToLevel(stack, 0, result);
 	}
 
-	private processLine(lineString: string, lineNumber: number, stack: Node[], result: ParseResult | null): void {
+	/**
+	 * Processes one source line. Errors of this line are collected into the result and the
+	 * traversal continues with the next line: returns true to keep going, false when a limit
+	 * aborted the parse (its error is already emitted) — parseLines stops on it.
+	 */
+	private processLine(lineString: string, lineNumber: number, stack: Node[], result: ParseResult | null): boolean {
 		try {
 			const lastNode: Node | null = stack.length === 0 ? null : stack[stack.length - 1];
 			// The stack holds the open nodes, one per level: its size is the level of the next line's parent
@@ -221,7 +220,7 @@ export class Parser {
 				this.observers.forEach(observer => {
 					observer.onComment(lineNumber, lineString);
 				});
-				return;
+				return true;
 			}
 
 			const currentLevel = line.level;
@@ -237,20 +236,21 @@ export class Parser {
 					observer.onTextLine(textNode, lineNumber, lineString, line);
 				});
 
-				return;
+				return true;
 			}
 
 			// Empty lines are ignored
 			if (line.isEmpty()) {
-				return;
+				return true;
 			}
 
 			// Nesting limit (spec 11.2): only a node line can open a new level. Comment and
 			// block text lines returned above; with the consecutive-level rule this triggers
 			// exactly when the first node at level maxNesting opens.
 			if (this.maxNesting !== -1 && currentLevel >= this.maxNesting) {
-				throw new LimitException(lineNumber, "LIMIT_NESTING_EXCEEDED",
-					`Nesting deeper than ${this.maxNesting} levels`);
+				this.emitError(new LimitException(lineNumber, "LIMIT_NESTING_EXCEEDED",
+					`Nesting deeper than ${this.maxNesting} levels`), result);
+				return false;
 			}
 
 			// Close the nodes down to the current level (this "finishes" them: validators and observers run)
@@ -275,11 +275,10 @@ export class Parser {
 			// Push it onto the stack
 			stack.push(node);
 		} catch (e: unknown) {
-			if (e instanceof LimitException) {
-				throw e;
-			}
 			this.handleError(e, lineNumber, result);
 		}
+
+		return true;
 	}
 
 	/**
