@@ -1,5 +1,6 @@
 import { NamespaceValidator } from "../core/NamespaceValidator";
 import { StringUtils } from "../core/StringUtils";
+import { ParseException } from "../exceptions/ParseException";
 import { ValidationException } from "../exceptions/ValidationException";
 import { NodeDefinition } from "./NodeDefinition";
 
@@ -7,6 +8,9 @@ import { NodeDefinition } from "./NodeDefinition";
 export class Schema {
 	/** Namespace of the schema language itself, `@stxt.schema`. */
 	static readonly SCHEMA_NAMESPACE = "@stxt.schema";
+
+	/** Namespace of the template language, `@stxt.template`. */
+	static readonly TEMPLATE_NAMESPACE = "@stxt.template";
 
 	private readonly nodes: Map<string, NodeDefinition> = new Map();
 	private readonly namespace: string;
@@ -53,13 +57,13 @@ export class Schema {
 	 * @throws ValidationException with code `NODE_DUPLICATED` if there already was a node definition with the same name.
 	 */
 	addNodeDefinition(nodeDefinition: NodeDefinition): void {
-		const qname = nodeDefinition.getCanonicalName();
+		const canonicalName = nodeDefinition.getCanonicalName();
 
-		if (this.nodes.has(qname)) {
-			throw new ValidationException(0, "NODE_DUPLICATED", `Exists a previous node definition with: ${qname}`);
+		if (this.nodes.has(canonicalName)) {
+			throw new ValidationException(ParseException.NO_LINE, "NODE_DUPLICATED", `A node definition with the same name already exists: ${canonicalName}`);
 		}
 
-		this.nodes.set(qname, nodeDefinition);
+		this.nodes.set(canonicalName, nodeDefinition);
 	}
 
 	/** @returns the namespace this schema applies to. */

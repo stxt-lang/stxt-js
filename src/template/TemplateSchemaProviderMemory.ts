@@ -1,9 +1,4 @@
-import { Parser } from "../core/Parser";
-import { Node } from "../core/Node";
-
-import { SchemaValidator } from "../schema/SchemaValidator";
-import { ValidationException } from "../exceptions/ValidationException";
-
+import { compileDefinitionDocument } from "../schema/DefinitionCompiler";
 import { MetaTemplateSchemaProvider } from "./MetaTemplateSchemaProvider";
 import { SchemaProviderMemory } from "../schema/SchemaProviderMemory";
 import { SchemaProvider } from "../schema/SchemaProvider";
@@ -39,24 +34,8 @@ export class TemplateSchemaProviderMemory extends SchemaProviderMemory {
 	 *         template does not validate against the template meta-schema.
 	 */
 	addTemplate(template: string): void {
-		const parser = new Parser();
+		const schema = compileDefinitionDocument(template, new MetaTemplateSchemaProvider(), transformTemplateNodeToSchema, "TEMPLATE_MULTIPLE_ROOTS", "template");
 
-		const nodes: Node[] = parser.parse(template);
-		if (nodes.length !== 1) {
-			throw new ValidationException(0, "TEMPLATE_MULTIPLE_ROOTS", `A template document must hold exactly 1 root node, got ${nodes.length}`);
-		}
-
-		// A template that does not validate against the template meta-schema must not
-		// be registered (same policy as UnifiedSchemaProvider/DiscoveryResolver)
-		const schemaValidator = new SchemaValidator(new MetaTemplateSchemaProvider(), true);
-		const errors = schemaValidator.validate(nodes[0]);
-		if (errors.length > 0) {
-			throw errors[0];
-		}
-
-		// Build the schema out of the template
-		const sch = transformTemplateNodeToSchema(nodes[0]);
-
-		this.schemas.set(sch.getNamespace(), sch);
+		this.schemas.set(schema.getNamespace(), schema);
 	}
 }

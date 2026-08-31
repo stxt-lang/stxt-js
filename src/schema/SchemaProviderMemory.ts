@@ -1,12 +1,9 @@
-import { Node } from "../core/Node";
-import { Parser } from "../core/Parser";
 import { StringUtils } from "../core/StringUtils";
 import { Schema } from "./Schema";
-import { ValidationException } from "../exceptions/ValidationException";
+import { compileDefinitionDocument } from "./DefinitionCompiler";
 import { transformNodeToSchema } from "./SchemaParser";
 import { SchemaProvider } from "./SchemaProvider";
 import { SchemaProviderMeta } from "./SchemaProviderMeta";
-import { SchemaValidator } from "./SchemaValidator";
 
 /**
  * In-memory {@link SchemaProvider}: it keeps the schemas added with {@link SchemaProviderMemory.addSchema}
@@ -58,25 +55,9 @@ export class SchemaProviderMemory implements SchemaProvider {
 	 *         particular `SCHEMA_MULTIPLE_ROOTS` if it does not hold exactly one root node.
 	 */
 	addSchema(txt: string): void {
-		const parser: Parser = new Parser();
-		const nodes: Node[] = parser.parse(txt);
-		if (nodes.length !== 1) {
-			throw new ValidationException(0, "SCHEMA_MULTIPLE_ROOTS", `A schema document must hold exactly 1 root node, got ${nodes.length}`);
-		}
-		const node: Node = nodes[0];
+		const schema: Schema = compileDefinitionDocument(txt, new SchemaProviderMeta(), transformNodeToSchema, "SCHEMA_MULTIPLE_ROOTS", "schema");
 
-		// A schema that does not validate against its meta-schema must not be
-		// registered (same policy as UnifiedSchemaProvider/DiscoveryResolver)
-		const schemaValidator = new SchemaValidator(new SchemaProviderMeta(), true);
-		const errors = schemaValidator.validate(node);
-		if (errors.length > 0) {
-			throw errors[0];
-		}
-
-		const schema: Schema = transformNodeToSchema(node);
-
-		const key = schema.getNamespace();
-		this.schemas.set(key, schema);
+		this.schemas.set(schema.getNamespace(), schema);
 	}
 
 	/** Removes every schema registered in this provider (the parent one is left untouched). */

@@ -66,10 +66,12 @@ export class DiscoveryResult implements SchemaProvider {
 	 * @returns the schema of the namespace, or null if the chain has no definition for it.
 	 */
 	getSchema(namespace: string): Schema | null | undefined {
-		if (namespace === "@stxt.template") {
-			return this.templateMeta.getSchema(namespace);
-		} else if (namespace === "@stxt.schema") {
-			return this.schemaMeta.getSchema(namespace);
+		const key = StringUtils.lowerCase(namespace);
+
+		if (key === Schema.TEMPLATE_NAMESPACE) {
+			return this.templateMeta.getSchema(key);
+		} else if (key === Schema.SCHEMA_NAMESPACE) {
+			return this.schemaMeta.getSchema(key);
 		}
 
 		return this.getDefinition(namespace)?.schema ?? null;

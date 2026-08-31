@@ -3,7 +3,15 @@
  * carries an UPPERCASE code and the line of the document where it was detected.
  */
 export class ParseException extends Error {
-	/** Line number of the document where the error was detected. */
+	/**
+	 * Line of an error that has no single source line: it concerns the document as a whole
+	 * (`SCHEMA_MULTIPLE_ROOTS`) or a condition with no one line to point at (`NODE_DUPLICATED`,
+	 * `CHILD_NOT_DEFINED`). The value 0 is part of the conformance surface (the kit asserts it);
+	 * it is not `Node.NO_LINE` (-1), which marks nodes built programmatically, never errors.
+	 */
+	static readonly NO_LINE = 0;
+
+	/** Line number of the document where the error was detected, or {@link ParseException.NO_LINE}. */
 	public readonly line: number;
 	/** Error code in UPPERCASE (e.g. `INVALID_LINE`). */
 	public readonly code: string;

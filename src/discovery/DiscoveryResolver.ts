@@ -3,9 +3,9 @@ import { Parser } from "../core/Parser";
 import { StringUtils } from "../core/StringUtils";
 import { ParseException } from "../exceptions/ParseException";
 import { Schema } from "../schema/Schema";
+import { compileDefinitionNode } from "../schema/DefinitionCompiler";
 import { SchemaProvider } from "../schema/SchemaProvider";
 import { SchemaProviderMeta } from "../schema/SchemaProviderMeta";
-import { SchemaValidator } from "../schema/SchemaValidator";
 import { transformNodeToSchema } from "../schema/SchemaParser";
 import { MetaTemplateSchemaProvider } from "../template/MetaTemplateSchemaProvider";
 import { transformTemplateNodeToSchema } from "../template/TemplateParser";
@@ -266,10 +266,10 @@ export class DiscoveryResolver {
 		let schema: Schema;
 
 		try {
-			if (namespace === "@stxt.template") {
-				schema = this.compile(node, this.templateMeta, transformTemplateNodeToSchema);
-			} else if (namespace === "@stxt.schema") {
-				schema = this.compile(node, this.schemaMeta, transformNodeToSchema);
+			if (namespace === Schema.TEMPLATE_NAMESPACE) {
+				schema = compileDefinitionNode(node, this.templateMeta, transformTemplateNodeToSchema);
+			} else if (namespace === Schema.SCHEMA_NAMESPACE) {
+				schema = compileDefinitionNode(node, this.schemaMeta, transformNodeToSchema);
 			} else {
 				level.errors.push(new DiscoveryError(
 					DiscoveryError.NOT_A_DEFINITION, file,
@@ -314,15 +314,4 @@ export class DiscoveryResolver {
 		level.definitions.set(key, definition);
 	}
 
-	// Validates a root node against a meta-schema and transforms it into a Schema,
-	// throwing the first validation error (same policy as UnifiedSchemaProvider).
-	private compile(node: Node, meta: SchemaProvider, transform: (node: Node) => Schema): Schema {
-		const errors = new SchemaValidator(meta, true).validate(node);
-
-		if (errors.length > 0) {
-			throw errors[0];
-		}
-
-		return transform(node);
-	}
 }

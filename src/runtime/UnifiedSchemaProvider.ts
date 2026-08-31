@@ -2,11 +2,10 @@ import { Node } from "../core/Node";
 import { Parser } from "../core/Parser";
 import { StringUtils } from "../core/StringUtils";
 import { Schema } from "../schema/Schema";
+import { compileDefinitionNode } from "../schema/DefinitionCompiler";
 import { SchemaProvider } from "../schema/SchemaProvider";
 import { SchemaProviderMeta } from "../schema/SchemaProviderMeta";
 import { transformNodeToSchema } from "../schema/SchemaParser";
-import { SchemaValidator } from "../schema/SchemaValidator";
-import { ValidationException } from "../exceptions/ValidationException";
 import { MetaTemplateSchemaProvider } from "../template/MetaTemplateSchemaProvider";
 import { transformTemplateNodeToSchema } from "../template/TemplateParser";
 
@@ -38,15 +37,13 @@ export class UnifiedSchemaProvider implements SchemaProvider {
 	getSchema(namespace: string): Schema | undefined | null {
 		const key = StringUtils.lowerCase(namespace);
 
-		if (namespace === "@stxt.template") {
+		if (key === Schema.TEMPLATE_NAMESPACE) {
 			return this.templateMeta.getSchema(key);
-		} else if (namespace === "@stxt.schema") {
+		} else if (key === Schema.SCHEMA_NAMESPACE) {
 			return this.schemaMeta.getSchema(key);
 		}
 
-		const result: Schema | undefined | null = this.schemas.get(key);
-
-		return result;
+		return this.schemas.get(key);
 	}
 
 	/**
@@ -64,43 +61,20 @@ export class UnifiedSchemaProvider implements SchemaProvider {
 		for (const node of nodes) {
 			const namespace = node.getNamespace();
 
-			if (namespace === "@stxt.template") {
-				this.addTemplateNode(node);
-			} else if (namespace === "@stxt.schema") {
-				this.addSchemaNode(node);
+			if (namespace === Schema.TEMPLATE_NAMESPACE) {
+				this.addNode(node, this.templateMeta, transformTemplateNodeToSchema);
+			} else if (namespace === Schema.SCHEMA_NAMESPACE) {
+				this.addNode(node, this.schemaMeta, transformNodeToSchema);
 			}
 		}
 	}
 
-	private addTemplateNode(node: Node): void {
-		// Validate against the meta-schema of templates
-		const schemaValidator = new SchemaValidator(this.templateMeta, true);
-		UnifiedSchemaProvider.throwIfInvalid(schemaValidator.validate(node));
+	// Compiles a definition root through the shared pipeline (see DefinitionCompiler)
+	// and registers it; a definition that does not validate is never registered.
+	private addNode(node: Node, meta: SchemaProvider, transform: (node: Node) => Schema): void {
+		const schema: Schema = compileDefinitionNode(node, meta, transform);
 
-		// Transform the template into a schema
-		const schema: Schema = transformTemplateNodeToSchema(node);
-		const key = StringUtils.lowerCase(schema.getNamespace());
-
-		this.schemas.set(key, schema);
-	}
-
-	private addSchemaNode(node: Node): void {
-		// Validate against the meta-schema of schemas
-		const schemaValidator = new SchemaValidator(this.schemaMeta, true);
-		UnifiedSchemaProvider.throwIfInvalid(schemaValidator.validate(node));
-
-		// Transform the node into a schema
-		const schema: Schema = transformNodeToSchema(node);
-		const key = StringUtils.lowerCase(schema.getNamespace());
-
-		this.schemas.set(key, schema);
-	}
-
-	// A schema/template that does not validate against its meta-schema must not be loaded
-	private static throwIfInvalid(errors: ValidationException[]): void {
-		if (errors.length > 0) {
-			throw errors[0];
-		}
+		this.schemas.set(StringUtils.lowerCase(schema.getNamespace()), schema);
 	}
 
 	/** Removes every schema and template registered in this provider. */

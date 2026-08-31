@@ -4,6 +4,7 @@ import { Node } from "../core/Node";
 import { Schema } from "../schema/Schema";
 import { SchemaProvider } from "../schema/SchemaProvider";
 
+import { ParseException } from "../exceptions/ParseException";
 import { ValidationException } from "../exceptions/ValidationException";
 import { transformTemplateNodeToSchema } from "./TemplateParser";
 
@@ -19,26 +20,33 @@ export class MetaTemplateSchemaProvider implements SchemaProvider {
 \t\t\tStructure: (1) BLOCK
 `;
 
+	/** Compiled once per process and shared between instances, exactly like {@link SchemaProviderMeta}. */
+	private static compiledMeta: Schema | undefined;
+
 	private readonly meta: Schema;
 
 	/**
-	 * Parses the meta-template and keeps the schema it produces ready to be served.
+	 * Compiles the meta-template the first time and keeps the schema it produces ready to be served.
 	 *
 	 * @throws ValidationException with code `META_SCHEMA_INVALID` if the meta-template does not produce exactly one document.
 	 */
 	constructor() {
-		const parser = new Parser();
-		const nodes: Node[] = parser.parse(MetaTemplateSchemaProvider.META_TEXT);
+		if (!MetaTemplateSchemaProvider.compiledMeta) {
+			const parser = new Parser();
+			const nodes: Node[] = parser.parse(MetaTemplateSchemaProvider.META_TEXT);
 
-		if (nodes.length !== 1) {
-			throw new ValidationException(
-				0,
-				"META_SCHEMA_INVALID",
-				`Meta schema must produce exactly 1 document, got ${nodes.length}`
-			);
+			if (nodes.length !== 1) {
+				throw new ValidationException(
+					ParseException.NO_LINE,
+					"META_SCHEMA_INVALID",
+					`Meta schema must produce exactly 1 document, got ${nodes.length}`
+				);
+			}
+
+			MetaTemplateSchemaProvider.compiledMeta = transformTemplateNodeToSchema(nodes[0]);
 		}
 
-		this.meta = transformTemplateNodeToSchema(nodes[0]);
+		this.meta = MetaTemplateSchemaProvider.compiledMeta;
 	}
 
 	/**
@@ -52,13 +60,8 @@ export class MetaTemplateSchemaProvider implements SchemaProvider {
 	 * @returns the meta-schema of the template language, or `null` for any other namespace.
 	 */
 	getSchema(namespace: string): Schema | null {
-		if (namespace !== "@stxt.template") {
+		if (namespace !== Schema.TEMPLATE_NAMESPACE) {
 			return null;
-		}
-
-		// meta always exists once the constructor finished, but this mirrors the Java version
-		if (!this.meta) {
-			throw new ValidationException(0, "META_SCHEMA_NOT_AVAILABLE", "Meta schema not available");
 		}
 
 		return this.meta;

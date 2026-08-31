@@ -15,8 +15,8 @@ import { ParseException } from "../exceptions/ParseException";
 import { TypeRegistry } from "../schema/TypeRegistry";
 import { NamespaceValidator } from "../core/NamespaceValidator";
 
-/** Namespace of the template language itself, `@stxt.template`. */
-export const TEMPLATE_NAMESPACE = "@stxt.template";
+/** Namespace of the template language itself; the canonical constant is {@link Schema.TEMPLATE_NAMESPACE}. */
+export const TEMPLATE_NAMESPACE = Schema.TEMPLATE_NAMESPACE;
 
 /**
  * Turns the tree of an already parsed `@stxt.template` document into an equivalent {@link Schema}.
@@ -99,7 +99,15 @@ export function transformTemplateNodeToSchema(node: Node): Schema {
 }
 
 
-/** Adds to the schema the definition a node of the structure declares, along with its children. */
+/**
+ * Adds to the schema the definition a node of the structure declares, along with its children.
+ *
+ * Only the orchestration lives here; each of the three shapes a Structure line can take has its
+ * own helper below: a node of an external namespace ({@link validateExternalNode}, nothing is
+ * created), a name seen for the first time ({@link createDefinition}) or a reappearance
+ * ({@link validateReference}, nothing is created). The children of a definition are declared
+ * and recursed by {@link addChildren}.
+ */
 function addToSchema(schema: Schema, node: Node): void {
 	// A Structure line must use the template grammar's ':' form. The core parser
 	// also accepts BLOCK nodes here, so reject them explicitly (STXT-TEMPLATE-SPEC 6.3).
@@ -107,133 +115,157 @@ function addToSchema(schema: Schema, node: Node): void {
 		throw new ValidationException(node.getLine(), "STRUCTURE_LINE_NOT_VALID", "Template Structure lines must use ':'");
 	}
 
-	// Get the qualified name
+	// Parse the RuleSpec (cardinality / type / values) from the inline value
+	const cl: ChildLine = ChildLineParser.parse(node.getValue(), node.getLine());
+
+	// No explicit namespace => the target namespace of the template
 	let namespace = node.getNamespace();
-	const name = node.getName();
-
-	// Look at the data
-	let cl: ChildLine = ChildLineParser.parse(node.getValue(), node.getLine());
-
 	if (!namespace || namespace === "") {
 		namespace = schema.getNamespace();
 	}
 
 	if (namespace !== schema.getNamespace()) {
-		// An external node may only declare cardinality: no type, no ENUM values
-		// and no children (STXT-TEMPLATE-SPEC 6.4, 10 and 14.15)
-		const type = cl.getType();
-		if (type && StringUtils.trim(type).length > 0) {
-			throw new ValidationException(node.getLine(), "TYPE_NOT_ALLOWED_IN_EXTERNAL_NAMESPACE", "Not allowed type definition in external namespaces");
-		}
-
-		const values = cl.getValues();
-		if (values) {
-			throw new ValidationException(node.getLine(), "VALUES_NOT_ALLOWED_IN_EXTERNAL_NAMESPACE", `Not allowed values in external namespaces (node ${node.getName()})`);
-		}
-
-		if (node.getChildren().length > 0) {
-			throw new ValidationException(node.getLine(), "CHILDREN_NOT_ALLOWED_IN_EXTERNAL_NAMESPACE", `Not allowed children in external namespaces (node ${node.getName()})`);
-		}
-
-		// Nodes that do not belong to @stxt.template create nothing here!!
-		return;
+		validateExternalNode(node, cl);
+		return; // no definitions are created for nodes of other namespaces
 	}
 
-	// Check whether it is new and add it to the list
-	let schemaNode = schema.getNodeDefinition(name);
+	// New definition or a reappearance (reference)?
+	let schemaNode = schema.getNodeDefinition(node.getName());
 
-	if (!schemaNode) {
-		// New one
-		const type = cl.getType() ?? "INLINE";
-
-		// At this point the schema already holds both the previous definitions, already closed,
-		// and the open ancestors, so a reference that does not resolve here resolves to
-		// nothing (STXT-TEMPLATE-SPEC 6.4 and 14.11)
-		if (type.startsWith("@")) {
-			throw new ValidationException(node.getLine(), "REFERENCE_NOT_FOUND", `Reference '${type}' does not point to a previous definition or an open ancestor`);
-		}
-
-		schemaNode = new NodeDefinition(node.getName(), type, node.getLine(), undefined);
-		schema.addNodeDefinition(schemaNode);
-
-		if (!TypeRegistry.get(type)) {
-			throw new ValidationException(node.getLine(), "TYPE_NOT_VALID", `Type not valid: ${type}`);
-		}
-
-		const values = cl.getValues();
-		if (values) {
-			if (type !== "ENUM") {
-				// Same code as SchemaParser: a template is sugar equivalent to a schema
-				// (STXT-TEMPLATE-SPEC 13), so the same condition must not change its code
-				// depending on the entry point
-				throw new ValidationException(node.getLine(), "VALUES_NOT_ALLOWED_FOR_TYPE", `Values only supported for type ENUM, not for type ${type}`);
-			}
-			for (const v of values) {
-				schemaNode.addValue(v, node.getLine());
-			}
-		}
-
-		// An ENUM with no list of values is an invalid template (STXT-TEMPLATE-SPEC 9 and 13.7)
-		if (type === "ENUM" && (!values || values.length === 0)) {
-			throw new ValidationException(node.getLine(), "VALUES_REQUIRED", "ENUM Type must include values");
-		}
-	} else {
-		const type = cl.getType();
-		if (!type || !type.startsWith("@")) {
-			throw new ValidationException(node.getLine(), "REFERENCE_REQUIRED", `Multiple node reference must start with @: ${node.getName()}`);
-		}
-
-		const reference = StringUtils.trim(type.substring(1));
-
-		// Reference and explicit type on the same line (STXT-TEMPLATE-SPEC 14.13)
-		const explicitType = referenceType(reference, node.getCanonicalName());
-		if (explicitType) {
-			throw new ValidationException(node.getLine(), "REFERENCE_WITH_TYPE_NOT_ALLOWED", `Reference '@${node.getName()}' can not declare a type: ${explicitType}`);
-		}
-
-		if (StringUtils.normalize(reference) !== node.getCanonicalName()) {
-			throw new ValidationException(node.getLine(), "REFERENCE_NAME_NOT_VALID", `Reference must be '@${node.getName()}', not '${reference}'`);
-		}
-
-		// A reference may override the cardinality, but it may redefine neither the ENUM
-		// values nor the children (STXT-TEMPLATE-SPEC 6.4)
-		const values = cl.getValues();
-		if (values) {
-			throw new ValidationException(node.getLine(), "VALUES_NOT_ALLOWED_IN_REFERENCE", `Reference '@${node.getName()}' can not redefine ENUM values`);
-		}
-
-		if (node.getChildren().length > 0) {
-			throw new ValidationException(node.getLine(), "CHILDREN_NOT_ALLOWED_IN_REFERENCE", `Reference '@${node.getName()}' can not redefine children`);
-		}
-
-		return; // OK Definition
+	if (schemaNode) {
+		validateReference(node, cl);
+		return; // valid reference: nothing is redefined, no children are processed
 	}
 
-	// Once it exists, try to create its children if it has any.
-	const childrenNode = node.getChildren();
+	schemaNode = createDefinition(schema, node, cl);
+	addChildren(schema, schemaNode, node);
+}
 
-	// Template error 14.9: node with children and an effective type that does not admit children
-	if (childrenNode.length > 0 && !TypeRegistry.admitsChildren(schemaNode.getType())) {
+/**
+ * Cross-namespace node (STXT-TEMPLATE-SPEC 6.4, 10 and 14.15): not defined locally; it may only
+ * declare cardinality — no type, no ENUM values and no children.
+ */
+function validateExternalNode(node: InlineNode, cl: ChildLine): void {
+	const type = cl.getType();
+	if (type && StringUtils.trim(type).length > 0) {
+		throw new ValidationException(node.getLine(), "TYPE_NOT_ALLOWED_IN_EXTERNAL_NAMESPACE", "Not allowed type definition in external namespaces");
+	}
+
+	if (cl.getValues()) {
+		throw new ValidationException(node.getLine(), "VALUES_NOT_ALLOWED_IN_EXTERNAL_NAMESPACE", `Not allowed values in external namespaces (node ${node.getName()})`);
+	}
+
+	if (node.getChildren().length > 0) {
+		throw new ValidationException(node.getLine(), "CHILDREN_NOT_ALLOWED_IN_EXTERNAL_NAMESPACE", `Not allowed children in external namespaces (node ${node.getName()})`);
+	}
+}
+
+/**
+ * First appearance of a name: creates its {@link NodeDefinition} (with its type and its ENUM
+ * values, when it has them) and registers it in the schema.
+ */
+function createDefinition(schema: Schema, node: InlineNode, cl: ChildLine): NodeDefinition {
+	const type = cl.getType() ?? "INLINE";
+
+	// At this point the schema already holds both the previous definitions, already closed,
+	// and the open ancestors, so a reference that does not resolve here resolves to
+	// nothing (STXT-TEMPLATE-SPEC 6.4 and 14.11)
+	if (type.startsWith("@")) {
+		throw new ValidationException(node.getLine(), "REFERENCE_NOT_FOUND", `Reference '${type}' does not point to a previous definition or an open ancestor`);
+	}
+
+	const schemaNode = new NodeDefinition(node.getName(), type, node.getLine(), undefined);
+	schema.addNodeDefinition(schemaNode);
+
+	if (!TypeRegistry.get(type)) {
+		throw new ValidationException(node.getLine(), "TYPE_NOT_VALID", `Type not valid: ${type}`);
+	}
+
+	const values = cl.getValues();
+	if (values) {
+		if (type !== "ENUM") {
+			// Same code as SchemaParser: a template is sugar equivalent to a schema
+			// (STXT-TEMPLATE-SPEC 13), so the same condition must not change its code
+			// depending on the entry point
+			throw new ValidationException(node.getLine(), "VALUES_NOT_ALLOWED_FOR_TYPE", `Values only supported for type ENUM, not for type ${type}`);
+		}
+		for (const v of values) {
+			schemaNode.addValue(v, node.getLine());
+		}
+	}
+
+	// An ENUM with no list of values is an invalid template (STXT-TEMPLATE-SPEC 9 and 13.7)
+	if (type === "ENUM" && (!values || values.length === 0)) {
+		throw new ValidationException(node.getLine(), "VALUES_REQUIRED", "ENUM Type must include values");
+	}
+
+	return schemaNode;
+}
+
+/**
+ * Reappearance of an already defined name: it must be a `@Node Name` reference, and a reference
+ * may override the cardinality but may redefine neither the ENUM values nor the children
+ * (STXT-TEMPLATE-SPEC 6.4, 14.12 and 14.13).
+ */
+function validateReference(node: InlineNode, cl: ChildLine): void {
+	const type = cl.getType();
+
+	// A reappearance without "@" would redefine an existing node: error.
+	if (!type || !type.startsWith("@")) {
+		throw new ValidationException(node.getLine(), "REFERENCE_REQUIRED", `Multiple node reference must start with @: ${node.getName()}`);
+	}
+
+	const reference = StringUtils.trim(type.substring(1));
+
+	// Reference and explicit type on the same line (STXT-TEMPLATE-SPEC 14.13)
+	const explicitType = referenceType(reference, node.getCanonicalName());
+	if (explicitType) {
+		throw new ValidationException(node.getLine(), "REFERENCE_WITH_TYPE_NOT_ALLOWED", `Reference '@${node.getName()}' can not declare a type: ${explicitType}`);
+	}
+
+	// The name of the reference must match (canonically) the one of the line (14.12)
+	if (StringUtils.normalize(reference) !== node.getCanonicalName()) {
+		throw new ValidationException(node.getLine(), "REFERENCE_NAME_NOT_VALID", `Reference must be '@${node.getName()}', not '${reference}'`);
+	}
+
+	if (cl.getValues()) {
+		throw new ValidationException(node.getLine(), "VALUES_NOT_ALLOWED_IN_REFERENCE", `Reference '@${node.getName()}' can not redefine ENUM values`);
+	}
+
+	if (node.getChildren().length > 0) {
+		throw new ValidationException(node.getLine(), "CHILDREN_NOT_ALLOWED_IN_REFERENCE", `Reference '@${node.getName()}' can not redefine children`);
+	}
+}
+
+/**
+ * Declares every direct child of a definition as a {@link ChildDefinition} (with its cardinality)
+ * and recurses into each one as a definition/reference of its own.
+ */
+function addChildren(schema: Schema, schemaNode: NodeDefinition, node: InlineNode): void {
+	const children = node.getChildren();
+
+	// Template error 14.9: children under an effective type that does not admit them
+	if (children.length > 0 && !TypeRegistry.admitsChildren(schemaNode.getType())) {
 		throw new ValidationException(node.getLine(), "CHILDREN_NOT_ALLOWED_FOR_TYPE", `Type ${schemaNode.getType()} does not allow children (node ${node.getName()})`);
 	}
 
-	// Add the children
-	for (const child of childrenNode) {
+	for (const child of children) {
 		// STXT-TEMPLATE-SPEC 6.3: every Structure line uses ':', so a child is inline too
 		if (!(child instanceof InlineNode)) {
 			throw new ValidationException(child.getLine(), "STRUCTURE_LINE_NOT_VALID", "Template Structure lines must use ':'");
 		}
-		cl = ChildLineParser.parse(child.getValue(), child.getLine());
+		const childCl = ChildLineParser.parse(child.getValue(), child.getLine());
 
-		const childName = child.getName();
 		let childNamespace = child.getNamespace();
 		if (!childNamespace || childNamespace === "") {
 			childNamespace = schema.getNamespace();
 		}
 
-		const schChild = new ChildDefinition(childName, childNamespace, cl.getMin(), cl.getMax(), child.getLine());
+		// The child is declared as a Child (with its cardinality) in the current definition
+		const schChild = new ChildDefinition(child.getName(), childNamespace, childCl.getMin(), childCl.getMax(), child.getLine());
 		schemaNode.addChildDefinition(schChild);
 
+		// And processed recursively as a definition/reference
 		addToSchema(schema, child);
 	}
 }

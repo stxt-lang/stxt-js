@@ -3,6 +3,7 @@ import { NodeDefinition } from "./NodeDefinition";
 import { ChildDefinition } from "./ChildDefinition";
 import { Node } from "../core/Node";
 import { InlineNode } from "../core/InlineNode";
+import { ParseException } from "../exceptions/ParseException";
 import { ValidationException } from "../exceptions/ValidationException";
 import { NamespaceValidator } from "../core/NamespaceValidator";
 import { StringUtils } from "../core/StringUtils";
@@ -28,9 +29,11 @@ export function transformNodeToSchema(node: Node): Schema {
 	}
 	const root = inline(node);
 
-	// The target namespace: required, and with a valid format
+	// The target namespace: required, and with a valid format. The value arrives already
+	// trimmed of language blanks by the parser; any other whitespace (NBSP...) is content
+	// and must fall through to the format check, exactly as in the other ports.
 	const targetNamespace = StringUtils.lowerCase(root.getValue());
-	if (!targetNamespace || targetNamespace.trim().length === 0) {
+	if (!targetNamespace) {
 		throw new ValidationException(root.getLine(), "SCHEMA_NAMESPACE_EMPTY", "Schema namespace is empty");
 	}
 	if (!NamespaceValidator.isValid(targetNamespace)) {
@@ -60,7 +63,7 @@ export function transformNodeToSchema(node: Node): Schema {
 				const childNorm = schChild.getCanonicalName();
 
 				if (!allNames.has(childNorm)) {
-					throw new ValidationException(0, "CHILD_NOT_DEFINED", `Child ${childNorm} not defined in ${schema.getNamespace()}`);
+					throw new ValidationException(ParseException.NO_LINE, "CHILD_NOT_DEFINED", `Child ${childNorm} not defined in ${schema.getNamespace()}`);
 				}
 			}
 		}
@@ -102,8 +105,9 @@ function createFrom(node: Node, namespace: string): NodeDefinition {
 		}
 	}
 
-	// Look at the values
-	let valuesNodes = n.getChildrenByName("values");
+	// Allowed values: only valid for the ENUM type
+	const valuesNodes = n.getChildrenByName("values"); // the "Values:" containers
+	let valueEntries: ReadonlyArray<Node> = [];        // the "Value:" entries inside
 	if (valuesNodes && valuesNodes.length > 0) {
 		if (type !== "ENUM") {
 			throw new ValidationException(n.getLine(), "VALUES_NOT_ALLOWED_FOR_TYPE", `Values only supported for type ENUM, not for type ${type}`);
@@ -113,9 +117,8 @@ function createFrom(node: Node, namespace: string): NodeDefinition {
 			throw new ValidationException(valuesNodes[1].getLine(), "VALUES_DUPLICATED", `Node '${n.getValue()}' defines 'Values' ${valuesNodes.length} times`);
 		}
 
-		const valuesNode = valuesNodes[0];
-		const values = inline(valuesNode).getChildrenByName("value");
-		for (const v of values) {
+		valueEntries = inline(valuesNodes[0]).getChildrenByName("value");
+		for (const v of valueEntries) {
 			// An empty Value: is a schema error (STXT-SCHEMA-SPEC 7.2, condition 14 of section 13):
 			// an enumeration whose only valid value is the empty string makes no sense
 			if (v.getText().length === 0) {
@@ -123,13 +126,10 @@ function createFrom(node: Node, namespace: string): NodeDefinition {
 			}
 			result.addValue(v.getText(), v.getLine());
 		}
-
-		// For the final ENUM check
-		valuesNodes = values;
 	}
 
-	// Look at the enum
-	if (type === "ENUM" && (!valuesNodes || valuesNodes.length === 0)) {
+	// An ENUM must declare at least one value (a "Values:" with no entries included)
+	if (type === "ENUM" && valueEntries.length === 0) {
 		throw new ValidationException(n.getLine(), "VALUES_REQUIRED", "ENUM Type must include values");
 	}
 

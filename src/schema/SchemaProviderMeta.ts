@@ -2,6 +2,7 @@ import { Schema } from "./Schema";
 import { SchemaProvider } from "./SchemaProvider";
 import { Parser } from "../core/Parser";
 import { Node } from "../core/Node";
+import { ParseException } from "../exceptions/ParseException";
 import { ValidationException } from "../exceptions/ValidationException";
 import { transformNodeToSchema } from "./SchemaParser";
 
@@ -74,22 +75,33 @@ export class SchemaProviderMeta implements SchemaProvider {
     Node: Value
 `;
 
+	/**
+	 * The meta-schema is immutable, so it is compiled once per process, lazily, and every
+	 * instance serves this same schema (constructing these providers is common: every
+	 * `addSchema()` and every discovery compilation builds one).
+	 */
+	private static compiledMeta: Schema | undefined;
+
 	private readonly meta: Schema;
 
 	/**
-	 * Parses the meta-schema and keeps it ready to be served.
+	 * Compiles the meta-schema the first time and keeps it ready to be served.
 	 *
 	 * @throws ValidationException with code `META_SCHEMA_INVALID` if the meta-schema does not produce exactly one document.
 	 */
 	constructor() {
-		const parser = new Parser();
-		const nodes: Node[] = parser.parse(SchemaProviderMeta.META_TEXT);
+		if (!SchemaProviderMeta.compiledMeta) {
+			const parser = new Parser();
+			const nodes: Node[] = parser.parse(SchemaProviderMeta.META_TEXT);
 
-		if (nodes.length !== 1) {
-			throw new ValidationException(0, "META_SCHEMA_INVALID", `Meta schema must produce exactly 1 document, got ${nodes.length}`);
+			if (nodes.length !== 1) {
+				throw new ValidationException(ParseException.NO_LINE, "META_SCHEMA_INVALID", `Meta schema must produce exactly 1 document, got ${nodes.length}`);
+			}
+
+			SchemaProviderMeta.compiledMeta = transformNodeToSchema(nodes[0]);
 		}
 
-		this.meta = transformNodeToSchema(nodes[0]);
+		this.meta = SchemaProviderMeta.compiledMeta;
 	}
 
 	/**
@@ -106,10 +118,6 @@ export class SchemaProviderMeta implements SchemaProvider {
 	getSchema(namespace: string): Schema | null {
 		if (namespace !== Schema.SCHEMA_NAMESPACE) {
 			return null;
-		}
-
-		if (!this.meta) {
-			throw new ValidationException(0, "META_SCHEMA_NOT_AVAILABLE", "Meta schema not available");
 		}
 
 		return this.meta;

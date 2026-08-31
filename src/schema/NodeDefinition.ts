@@ -1,3 +1,4 @@
+import { ParseException } from "../exceptions/ParseException";
 import { ValidationException } from "../exceptions/ValidationException";
 import { StringUtils } from "../core/StringUtils";
 import { ChildDefinition } from "./ChildDefinition";
@@ -78,7 +79,7 @@ export class NodeDefinition {
 	addChildDefinition(childDefinition: ChildDefinition): void {
 		const qname = childDefinition.getQualifiedName();
 		if (this.children.has(qname)) {
-			throw new ValidationException(0, "CHILD_DUPLICATED", `Exists a previous node definition with: ${qname}`);
+			throw new ValidationException(ParseException.NO_LINE, "CHILD_DUPLICATED", `A child declaration with the same name already exists: ${qname}`);
 		}
 		this.children.set(qname, childDefinition);
 	}
@@ -94,13 +95,15 @@ export class NodeDefinition {
 	 * @throws ValidationException with code `VALUE_DUPLICATED` if the value (once trimmed) had already been added.
 	 */
 	addValue(value: string, line?: number): void {
-		const trimmed = value?.trim() ?? "";
+		// Language blanks only (U+0020/U+0009): any other whitespace (NBSP...) is part of
+		// the value, so `x` and `x<NBSP>` are two different ENUM values, as in every port.
+		const trimmed = StringUtils.trim(value ?? "");
 
 		if (this.values.has(trimmed)) {
 			throw new ValidationException(
-				line ?? 0,
+				line ?? ParseException.NO_LINE,
 				"VALUE_DUPLICATED",
-				`The values ${trimmed} is duplicated`
+				`The value ${trimmed} is duplicated`
 			);
 		}
 
