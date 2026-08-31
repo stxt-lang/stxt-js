@@ -11,7 +11,7 @@ import { MetaTemplateSchemaProvider } from "../template/MetaTemplateSchemaProvid
 import { transformTemplateNodeToSchema } from "../template/TemplateParser";
 import { DiscoveryEnvironment } from "./DiscoveryEnvironment";
 import { DiscoveryError } from "./DiscoveryError";
-import { DiscoveryFileSystem } from "./DiscoveryFileSystem";
+import { DiscoveryEntry, DiscoveryFileSystem } from "./DiscoveryFileSystem";
 import { DiscoveryDefinition, DiscoveryLevel, DiscoveryResult } from "./DiscoveryResult";
 
 /** Options of a {@link DiscoveryResolver}. */
@@ -32,6 +32,13 @@ const STXT_EXTENSION = ".stxt";
 
 /** Default value of {@link DiscoveryOptions.maxAscent}. */
 const DEFAULT_MAX_ASCENT = 32;
+
+/**
+ * Maximum depth of the recursive descent through a resolution directory's subtree. An
+ * internal safeguard (STXT-DISCOVERY-SPEC sections 3 and 10) against symlink loops and
+ * pathological trees; not part of the public API.
+ */
+const DEFAULT_MAX_DESCENT = 32;
 
 /**
  * Reference implementation of STXT-DISCOVERY-SPEC: builds the resolution chain of a
@@ -178,14 +185,38 @@ export class DiscoveryResolver {
     }
 
     // Collects every file under a directory, recursively, sorted by path so that results
-    // and error messages do not depend on the listing order of the file system.
+    // and error messages do not depend on the listing order of the file system. The descent
+    // is bounded by DEFAULT_MAX_DESCENT and tolerant of listing failures (STXT-DISCOVERY-SPEC
+    // sections 3 and 10): a subdirectory that reaches the depth limit or cannot be listed
+    // contributes no files, never an exception. Together with adapters that do not follow
+    // directory symlinks, this stops symlink loops and pathological trees from turning
+    // resolution into unbounded recursion or an escaping error.
     private async collectFiles(dir: string): Promise<string[]> {
+        return this.collectFilesAt(dir, 0);
+    }
+
+    private async collectFilesAt(dir: string, depth: number): Promise<string[]> {
         const files: string[] = [];
-        const entries = [...await this.fs.listDirectory(dir)].sort((a, b) => a.path < b.path ? -1 : 1);
+
+        // Safeguard against symlink loops and pathological trees (spec section 10): stop
+        // descending once the depth limit is reached.
+        if (depth >= DEFAULT_MAX_DESCENT) {
+            return files;
+        }
+
+        let entries: DiscoveryEntry[];
+
+        try {
+            entries = [...await this.fs.listDirectory(dir)].sort((a, b) => a.path < b.path ? -1 : 1);
+        } catch {
+            // A directory that cannot be listed contributes no files (spec section 3); it
+            // does not stop the resolution of the rest of the level.
+            return files;
+        }
 
         for (const entry of entries) {
             if (entry.isDirectory) {
-                files.push(...await this.collectFiles(entry.path));
+                files.push(...await this.collectFilesAt(entry.path, depth + 1));
             } else {
                 files.push(entry.path);
             }

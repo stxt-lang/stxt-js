@@ -1,5 +1,6 @@
 import * as assert from "assert";
 import { MemoryFileSystem, TestEnvironment } from "./discoveryMemory";
+import { DiscoveryEntry } from "../discovery/DiscoveryFileSystem";
 import { DiscoveryError } from "../discovery/DiscoveryError";
 import { DiscoveryResolver } from "../discovery/DiscoveryResolver";
 
@@ -290,6 +291,69 @@ describe("DiscoveryResolver", () => {
 
 			assert.strictEqual(errors.length, 1);
 			assert.strictEqual(errors[0].code, DiscoveryError.INVALID_DEFINITION);
+		});
+	});
+
+	describe("descent safeguards (spec sections 3 and 10)", () => {
+
+		it("a directory that lists itself (a symlink loop) terminates without overflowing", async () => {
+			// The '/repo/.stxt/self' entry is a directory whose listing contains itself: an
+			// unbounded descent unless the depth limit stops it.
+			const fs = new (class extends MemoryFileSystem {
+				async listDirectory(path: string): Promise<DiscoveryEntry[]> {
+					if (path === "/repo/.stxt/self") {
+						return [{ path: "/repo/.stxt/self", name: "self", isDirectory: true }];
+					}
+					const base = await super.listDirectory(path);
+					if (path === "/repo/.stxt") {
+						base.push({ path: "/repo/.stxt/self", name: "self", isDirectory: true });
+					}
+					return base;
+				}
+			})({ "/repo/.stxt/good.stxt": template("com.acme.good", "Good") });
+			const resolver = new DiscoveryResolver(fs, new TestEnvironment());
+
+			const result = await resolver.resolve("/repo");
+
+			// It terminated, and the loop did not stop the real definition from loading.
+			assert.ok(result.getSchema("com.acme.good"));
+			assert.strictEqual(result.getErrors().length, 0);
+		});
+
+		it("a subdirectory whose listing fails is skipped, the rest of the level still loads", async () => {
+			const fs = new (class extends MemoryFileSystem {
+				async listDirectory(path: string): Promise<DiscoveryEntry[]> {
+					if (path === "/repo/.stxt/broken") {
+						throw new Error("EACCES: permission denied");
+					}
+					const base = await super.listDirectory(path);
+					if (path === "/repo/.stxt") {
+						base.push({ path: "/repo/.stxt/broken", name: "broken", isDirectory: true });
+					}
+					return base;
+				}
+			})({ "/repo/.stxt/good.stxt": template("com.acme.good", "Good") });
+			const resolver = new DiscoveryResolver(fs, new TestEnvironment());
+
+			const result = await resolver.resolve("/repo");
+
+			assert.ok(result.getSchema("com.acme.good"), "the unreadable subdirectory did not abort the level");
+			assert.strictEqual(result.getErrors().length, 0);
+		});
+
+		it("cuts the descent below the depth limit, keeping shallow definitions", async () => {
+			const deep = "/repo/.stxt/" +
+				Array.from({ length: 40 }, (_, i) => `d${i}`).join("/") + "/deep.stxt";
+			const fs = new MemoryFileSystem({
+				"/repo/.stxt/shallow.stxt": template("com.acme.shallow", "Shallow"),
+				[deep]: template("com.acme.deep", "Deep"),
+			});
+			const resolver = new DiscoveryResolver(fs, new TestEnvironment());
+
+			const result = await resolver.resolve("/repo");
+
+			assert.ok(result.getSchema("com.acme.shallow"), "a definition above the limit is loaded");
+			assert.strictEqual(result.getSchema("com.acme.deep"), null, "a definition past the limit is not reached");
 		});
 	});
 

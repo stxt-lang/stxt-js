@@ -2,6 +2,7 @@ import * as assert from "assert";
 import { Parser } from "../core/Parser";
 import { SchemaProviderMemory } from "../schema/SchemaProviderMemory";
 import { SchemaValidator } from "../schema/SchemaValidator";
+import { isValidBase64 } from "../schema/type/BASE64";
 
 /**
  * Value types (STXT-SCHEMA-SPEC section 9) checked through SchemaValidator over a schema that
@@ -206,5 +207,53 @@ describe("Binary types: blanks are removed wherever they are", () => {
 		assert.deepStrictEqual(blockCodes("HEXADECIMAL", ["DE AD", "", "\tBE EF  "]), []);
 		assert.deepStrictEqual(blockCodes("HEXADECIMAL", ["DE:AD", "BEEF"]), ["INVALID_VALUE"]);
 		assert.deepStrictEqual(blockCodes("HEXADECIMAL", ["", "  "]), ["INVALID_VALUE"]);
+	});
+});
+
+// The shape check must run in linear time: a grouped-repetition regex `(?:X{4})*` overflows
+// V8's stack (RangeError) on a few million characters, inside the default maxInputSize.
+describe("isValidBase64: linear shape, no stack overflow", () => {
+	it("accepts a five-million-character input without throwing", () => {
+		let result: boolean | undefined;
+		assert.doesNotThrow(() => { result = isValidBase64("A".repeat(5_000_000)); });
+		// 5_000_000 is a multiple of 4, so it is well-formed Base64 with no leftover bits.
+		assert.strictEqual(result, true);
+	});
+
+	it("stays semantically equivalent to the grammar on small inputs", () => {
+		// The reference the linear check must match exactly: the previous grouped-repetition
+		// shape plus the leftover-bits rule (STXT-SCHEMA-SPEC 9.5).
+		const shape = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}(?:==)?|[A-Za-z0-9+/]{3}=?)?$/;
+		const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+		const reference = (value: string): boolean => {
+			if (value.length === 0 || !shape.test(value)) {
+				return false;
+			}
+			const data = value.replace(/=+$/, "");
+			const rest = data.length % 4;
+			if (rest === 0) {
+				return true;
+			}
+			const last = alphabet.indexOf(data.charAt(data.length - 1));
+			const mask = rest === 2 ? 0x0f : 0x03;
+			return (last & mask) === 0;
+		};
+
+		const cases = [
+			// Valid, with and without padding.
+			"SGVsbG8=", "SGVsbG8", "SGVsbA==", "SGVsbA", "SGVsbG9=", "QQ==", "QUI=", "QUJD",
+			// Invalid by character outside the alphabet.
+			"SG:Vs", "SG-Vs", "SGVsbG8_", "SG=V", "a b",
+			// Leftover-bits rule: some pass (last bits zero), some fail.
+			"SGV", "SGVsbB", "QQ", "QUJDQQ",
+			// Invalid by padding: single trailing group, wrong padding length, empty.
+			"SGVsbG8==", "SGV=", "SGVsb", "=", "==", "",
+		];
+
+		for (const value of cases) {
+			assert.strictEqual(
+				isValidBase64(value), reference(value),
+				`isValidBase64(${JSON.stringify(value)}) disagrees with the grammar`);
+		}
 	});
 });

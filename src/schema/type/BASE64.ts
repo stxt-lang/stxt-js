@@ -8,31 +8,61 @@ import { binaryValue } from "./binaryValue";
 const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
 /**
- * Shape of a Base64 value (STXT-SCHEMA-SPEC 9.5): groups of four characters of the standard
- * alphabet, with an optional final group of two or three characters whose `=` padding may be
- * omitted. The empty string matches here and is rejected separately.
+ * Membership test for the standard alphabet, applied to the padding-stripped core. A plain
+ * character class with a single `*`, which matches in linear time with no backtracking —
+ * unlike a grouped-repetition shape such as `(?:[A-Za-z0-9+/]{4})*`, whose backtracking state
+ * overflows V8's call stack (`RangeError`) on inputs of a few million characters, still inside
+ * the default `maxInputSize`.
  */
-const SHAPE = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}(?:==)?|[A-Za-z0-9+/]{3}=?)?$/;
+const ALPHABET_ONLY = /^[A-Za-z0-9+/]*$/;
 
 /**
  * STXT-SCHEMA-SPEC 9.5: standard Base64 (not URL-safe), padding optional, no leftover bits,
- * never empty. The check is a regular expression plus the leftover-bits rule, never the
- * platform decoder, which silently ignores characters outside the alphabet.
+ * never empty. The shape is checked in linear time — strip the optional trailing padding,
+ * enforce the padding/length rule, verify the core belongs to the standard alphabet — plus
+ * the leftover-bits rule; never the platform decoder, which silently ignores characters
+ * outside the alphabet.
  *
  * @param value value already stripped of blanks.
  * @returns whether it is valid Base64.
  */
 export function isValidBase64(value: string): boolean {
-	if (value.length === 0 || !SHAPE.test(value)) {
+	if (value.length === 0) {
 		return false;
 	}
-	const data = value.replace(/=+$/, "");
-	const rest = data.length % 4;
+
+	// Strip the optional final padding: 0, 1 or 2 '=' signs, only at the very end of the
+	// value. Three or more, or an '=' anywhere else, is rejected below by the alphabet check.
+	let core = value;
+	let padding = 0;
+
+	if (value.endsWith("==")) {
+		core = value.slice(0, -2);
+		padding = 2;
+	} else if (value.endsWith("=")) {
+		core = value.slice(0, -1);
+		padding = 1;
+	}
+
+	if (!ALPHABET_ONLY.test(core)) {
+		return false;
+	}
+
+	const rest = core.length % 4;
+
+	// A trailing group of a single character never occurs in Base64. Two '=' close a
+	// two-character group, one '=' a three-character group; with no padding the core is
+	// whole groups plus an optional final group of two or three characters.
+	if (padding === 2 ? rest !== 2 : padding === 1 ? rest !== 3 : rest === 1) {
+		return false;
+	}
+
 	if (rest === 0) {
 		return true;
 	}
+
 	// The last character encodes 6 bits; with 2 characters 4 of them are leftover, with 3, 2 of them.
-	const last = ALPHABET.indexOf(data.charAt(data.length - 1));
+	const last = ALPHABET.indexOf(core.charAt(core.length - 1));
 	const mask = rest === 2 ? 0x0f : 0x03;
 	return (last & mask) === 0;
 }
