@@ -159,7 +159,7 @@ describeCorpus("Examples of the portal (stxt-lang/{es,en})", root => {
 			// First pass: the definitions of the page, checked to load, with their namespaces.
 			const definitions: Definition[] = [];
 
-			for (const { block, position, roots } of parsed.filter(entry => isDefinition(entry.roots))) {
+			for (const { block, position } of parsed.filter(entry => isDefinition(entry.roots))) {
 				const where = `${name}, Code block at line ${block.line}`;
 
 				if (isMarkedInvalid(block)) {

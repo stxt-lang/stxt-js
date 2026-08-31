@@ -12,19 +12,19 @@ import { ValidationException } from "../../exceptions/ValidationException";
  * @returns the {@link Type} that validates the value against that pattern.
  */
 export function regexType(name: string, pattern: RegExp, error: string): Type {
-    return {
-        getName: () => name,
+	return {
+		getName: () => name,
 
-        validate(nodeDef: NodeDefinition, node: Node): void {
-            // INLINE value form (STXT-SCHEMA-SPEC 9.3/9.4): the block '>>' form is not allowed
-            if (node.isTextNode()) {
-                throw new ValidationException(node.getLine(), "BLOCK_FORM_NOT_ALLOWED", `Not allowed text in node ${node.getQualifiedName()}`);
-            }
+		validate(nodeDef: NodeDefinition, node: Node): void {
+			// INLINE value form (STXT-SCHEMA-SPEC 9.3/9.4): the block '>>' form is not allowed
+			if (node.isTextNode()) {
+				throw new ValidationException(node.getLine(), "BLOCK_FORM_NOT_ALLOWED", `Not allowed text in node ${node.getQualifiedName()}`);
+			}
 
-            const value = node.getText();
-            if (!pattern.test(value)) {
-                throw new ValidationException(node.getLine(),"INVALID_VALUE",`${node.getName()}: ${error} (${value})`);
-            }
-        },
-    };
+			const value = node.getText();
+			if (!pattern.test(value)) {
+				throw new ValidationException(node.getLine(),"INVALID_VALUE",`${node.getName()}: ${error} (${value})`);
+			}
+		},
+	};
 }

@@ -111,7 +111,7 @@ describeCorpus("Conformance kit", root => {
 	const manifest: Manifest = JSON.parse(fs.readFileSync(path.join(directory, "manifest.json"), "utf-8"));
 	// Definition files are told apart by suffix; the inputs of definition-error cases carry the
 	// kind in the manifest instead, so their virtual name `<input>.<kind>.stxt` maps back here.
-	const read = (file: string) => fs.readFileSync(path.join(directory, file.replace(/\.(schema|template)\.stxt$/, (m, k) => fs.existsSync(path.join(directory, file)) ? m : ".stxt")), "utf-8");
+	const read = (file: string) => fs.readFileSync(path.join(directory, file.replace(/\.(schema|template)\.stxt$/, (m) => fs.existsSync(path.join(directory, file)) ? m : ".stxt")), "utf-8");
 
 	it("declares a kit version and the specifications it covers", () => {
 		assert.match(manifest.kit, /^\d+\.\d+$/);

@@ -10,7 +10,7 @@ import { transformNodeToSchema } from "./SchemaParser";
  * (`@stxt.schema`), so that a loaded schema can validate itself.
  */
 export class SchemaProviderMeta implements SchemaProvider {
-    private static readonly META_TEXT = `Schema (@stxt.schema): @stxt.schema
+	private static readonly META_TEXT = `Schema (@stxt.schema): @stxt.schema
     Node: Schema
         Children:
             Child: Description
@@ -74,44 +74,44 @@ export class SchemaProviderMeta implements SchemaProvider {
     Node: Value
 `;
 
-    private readonly meta: Schema;
+	private readonly meta: Schema;
 
-    /**
-     * Parses the meta-schema and keeps it ready to be served.
-     *
-     * @throws ValidationException with code `META_SCHEMA_INVALID` if the meta-schema does not produce exactly one document.
-     */
-    constructor() {
-        const parser = new Parser();
-        const nodes: Node[] = parser.parse(SchemaProviderMeta.META_TEXT);
+	/**
+	 * Parses the meta-schema and keeps it ready to be served.
+	 *
+	 * @throws ValidationException with code `META_SCHEMA_INVALID` if the meta-schema does not produce exactly one document.
+	 */
+	constructor() {
+		const parser = new Parser();
+		const nodes: Node[] = parser.parse(SchemaProviderMeta.META_TEXT);
 
-        if (nodes.length !== 1) {
-            throw new ValidationException(0, "META_SCHEMA_INVALID", `Meta schema must produce exactly 1 document, got ${nodes.length}`);
-        }
+		if (nodes.length !== 1) {
+			throw new ValidationException(0, "META_SCHEMA_INVALID", `Meta schema must produce exactly 1 document, got ${nodes.length}`);
+		}
 
-        this.meta = transformNodeToSchema(nodes[0]);
-    }
+		this.meta = transformNodeToSchema(nodes[0]);
+	}
 
-    /**
-     * Serves the meta-schema of the schema language.
-     *
-     * Follows the {@link SchemaProvider} contract: providers never throw "not found". Any
-     * namespace other than `@stxt.schema` yields `null`, so that this provider can sit at
-     * the end of a fallback chain (it is the default parent of {@link SchemaProviderMemory})
-     * and the {@link SchemaValidator} is the only one reporting `SCHEMA_NOT_FOUND`.
-     *
-     * @param namespace namespace whose schema is wanted; only `@stxt.schema` is served.
-     * @returns the meta-schema of the schema language, or `null` for any other namespace.
-     */
-    getSchema(namespace: string): Schema | null {
-        if (namespace !== Schema.SCHEMA_NAMESPACE) {
-            return null;
-        }
+	/**
+	 * Serves the meta-schema of the schema language.
+	 *
+	 * Follows the {@link SchemaProvider} contract: providers never throw "not found". Any
+	 * namespace other than `@stxt.schema` yields `null`, so that this provider can sit at
+	 * the end of a fallback chain (it is the default parent of {@link SchemaProviderMemory})
+	 * and the {@link SchemaValidator} is the only one reporting `SCHEMA_NOT_FOUND`.
+	 *
+	 * @param namespace namespace whose schema is wanted; only `@stxt.schema` is served.
+	 * @returns the meta-schema of the schema language, or `null` for any other namespace.
+	 */
+	getSchema(namespace: string): Schema | null {
+		if (namespace !== Schema.SCHEMA_NAMESPACE) {
+			return null;
+		}
 
-        if (!this.meta) {
-            throw new ValidationException(0, "META_SCHEMA_NOT_AVAILABLE", "Meta schema not available");
-        }
+		if (!this.meta) {
+			throw new ValidationException(0, "META_SCHEMA_NOT_AVAILABLE", "Meta schema not available");
+		}
 
-        return this.meta;
-    }
+		return this.meta;
+	}
 }

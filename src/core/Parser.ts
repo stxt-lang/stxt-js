@@ -287,7 +287,7 @@ export class Parser {
 	 * are; anything else is wrapped under the code `UNEXPECTED_ERROR` (as a ValidationException
 	 * when it was raised by a validator, so that the subtype still tells the phase apart).
 	 */
-	private handleError(e: unknown, line: number, result: ParseResult | null, validating: boolean = false): void {
+	private handleError(e: unknown, line: number, result: ParseResult | null, validating = false): void {
 		if (e instanceof ParseException) {
 			this.emitError(e, result);
 		} else {

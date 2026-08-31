@@ -69,13 +69,13 @@ export function isValidBase64(value: string): boolean {
 
 /** `BASE64` type: checks that the content is valid Base64. */
 export const BASE64: Type = {
-    getName(): string {
-        return "BASE64";
-    },
+	getName(): string {
+		return "BASE64";
+	},
 
-    validate(ndef: NodeDefinition, n: Node): void {
-        if (!isValidBase64(binaryValue(n))) {
-            throw new ValidationException(n.getLine(), "INVALID_VALUE", `Node '${n.getName()}' Invalid Base64`);
-        }
-    },
+	validate(ndef: NodeDefinition, n: Node): void {
+		if (!isValidBase64(binaryValue(n))) {
+			throw new ValidationException(n.getLine(), "INVALID_VALUE", `Node '${n.getName()}' Invalid Base64`);
+		}
+	},
 };

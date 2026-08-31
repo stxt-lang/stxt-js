@@ -5,11 +5,11 @@ import { regexType } from "./regexType";
  * value (bare form)...
  */
 const ADDRESS = "(?=.{1,256}$)(?=.{1,64}@.{1,255}$)(?=.{1,64}@.{1,63}\\..{1,63}$)"
-    + "[A-Za-z0-9!#$%&'*+/=?^_`{|}~.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}";
+	+ "[A-Za-z0-9!#$%&'*+/=?^_`{|}~.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}";
 
 /** ...and the same address as it reads between `<` and `>` (the lookaheads stop at the `>`). */
 const BRACKETED = "(?=[^>]{1,256}>$)(?=[^>]{1,64}@[^>]{1,255}>$)(?=[^>]{1,64}@[^>]{1,63}\\.[^>]{1,63}>$)"
-    + "[A-Za-z0-9!#$%&'*+/=?^_`{|}~.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}";
+	+ "[A-Za-z0-9!#$%&'*+/=?^_`{|}~.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}";
 
 /**
  * `EMAIL` type: checks that the value is an e-mail address, in either of the two forms of
@@ -19,6 +19,6 @@ const BRACKETED = "(?=[^>]{1,256}>$)(?=[^>]{1,64}@[^>]{1,255}>$)(?=[^>]{1,64}@[^
  * optional; `<`/`>` without a name, unbalanced or followed by anything are rejected.
  */
 export const EMAIL = regexType("EMAIL",
-    new RegExp(`^(?:[^<>]*[^<>\\s]\\s*<${BRACKETED}>|${ADDRESS})$`),
-    "Invalid email"
+	new RegExp(`^(?:[^<>]*[^<>\\s]\\s*<${BRACKETED}>|${ADDRESS})$`),
+	"Invalid email"
 );

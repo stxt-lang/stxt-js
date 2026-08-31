@@ -59,7 +59,7 @@ export class NodeWriter {
 
 		out.push(n.getName());
 		if (ns !== parentNs) {
-			 out.push(" (", ns, ")");
+			out.push(" (", ns, ")");
 		}
 
 		if (n instanceof TextNode) {

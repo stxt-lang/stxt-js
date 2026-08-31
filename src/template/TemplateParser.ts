@@ -16,7 +16,6 @@ import { TypeRegistry } from "../schema/TypeRegistry";
 import { NamespaceValidator } from "../core/NamespaceValidator";
 
 /** Namespace of the template language itself, `@stxt.template`. */
-/** Namespace of the template language itself, `@stxt.template`. */
 export const TEMPLATE_NAMESPACE = "@stxt.template";
 
 /**

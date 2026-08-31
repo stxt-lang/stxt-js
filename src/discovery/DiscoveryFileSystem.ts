@@ -2,12 +2,12 @@
  * An entry of a directory listing, as returned by {@link DiscoveryFileSystem.listDirectory}.
  */
 export interface DiscoveryEntry {
-    /** Full path of the entry, in the same form the file system uses for every other path. */
-    path: string;
-    /** Base name of the entry (last path segment). */
-    name: string;
-    /** True if the entry is a directory. */
-    isDirectory: boolean;
+	/** Full path of the entry, in the same form the file system uses for every other path. */
+	path: string;
+	/** Base name of the entry (last path segment). */
+	name: string;
+	/** True if the entry is a directory. */
+	isDirectory: boolean;
 }
 
 /**
@@ -19,44 +19,44 @@ export interface DiscoveryEntry {
  * implementation must be canonical enough that string equality means "same directory".
  */
 export interface DiscoveryFileSystem {
-    /**
-     * Whether a path exists and is a directory.
-     *
-     * @param path path to check.
-     * @returns true if the path is an existing directory; false otherwise (including I/O errors).
-     */
-    isDirectory(path: string): Promise<boolean>;
+	/**
+	 * Whether a path exists and is a directory.
+	 *
+	 * @param path path to check.
+	 * @returns true if the path is an existing directory; false otherwise (including I/O errors).
+	 */
+	isDirectory(path: string): Promise<boolean>;
 
-    /**
-     * Lists the immediate entries of a directory.
-     *
-     * @param path directory to list.
-     * @returns the entries of the directory, in any order.
-     */
-    listDirectory(path: string): Promise<DiscoveryEntry[]>;
+	/**
+	 * Lists the immediate entries of a directory.
+	 *
+	 * @param path directory to list.
+	 * @returns the entries of the directory, in any order.
+	 */
+	listDirectory(path: string): Promise<DiscoveryEntry[]>;
 
-    /**
-     * Reads a file as UTF-8 text.
-     *
-     * @param path file to read.
-     * @returns the text content of the file.
-     */
-    readFile(path: string): Promise<string>;
+	/**
+	 * Reads a file as UTF-8 text.
+	 *
+	 * @param path file to read.
+	 * @returns the text content of the file.
+	 */
+	readFile(path: string): Promise<string>;
 
-    /**
-     * Returns the parent directory of a path, or null when the path is the file-system root.
-     *
-     * @param path path whose parent is wanted.
-     * @returns the parent path, or null at the root.
-     */
-    parentOf(path: string): string | null;
+	/**
+	 * Returns the parent directory of a path, or null when the path is the file-system root.
+	 *
+	 * @param path path whose parent is wanted.
+	 * @returns the parent path, or null at the root.
+	 */
+	parentOf(path: string): string | null;
 
-    /**
-     * Joins a directory path and a child name.
-     *
-     * @param path base directory.
-     * @param name child segment to append.
-     * @returns the joined path.
-     */
-    join(path: string, name: string): string;
+	/**
+	 * Joins a directory path and a child name.
+	 *
+	 * @param path base directory.
+	 * @param name child segment to append.
+	 * @returns the joined path.
+	 */
+	join(path: string, name: string): string;
 }

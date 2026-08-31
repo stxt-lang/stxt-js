@@ -23,7 +23,7 @@ import { Line } from "./Line";
  * @throws ParseException with code `INDENTATION_MIXED`, `INDENTATION_SPACES_NOT_VALID` or
  *         `INDENTATION_LEVEL_NOT_VALID` if the indentation is not valid.
  */
-export function parseLine(line: string, lastNodeBlock: boolean, lastLevel: number, numLine: number, validate: boolean = true): Line {
+export function parseLine(line: string, lastNodeBlock: boolean, lastLevel: number, numLine: number, validate = true): Line {
 	let level = 0;
 	let spaces = 0;
 	let pointer = 0;

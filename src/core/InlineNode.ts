@@ -98,6 +98,7 @@ export class InlineNode extends Node {
 		if (child.getParent() !== null) {
 			throw new RuntimeException("NODE_ALREADY_ATTACHED", `Node '${child.getName()}' already has a parent: detach it first`);
 		}
+		// eslint-disable-next-line @typescript-eslint/no-this-alias -- cursor of the ancestor walk, not an alias kept around
 		for (let p: Node | null = this; p !== null; p = p.getParent()) {
 			if (p === child) {
 				throw new RuntimeException("NODE_CYCLE", `Node '${child.getName()}' cannot be a child of itself or of one of its descendants`);
