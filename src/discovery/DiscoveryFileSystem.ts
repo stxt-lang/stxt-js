@@ -36,7 +36,11 @@ export interface DiscoveryFileSystem {
 	listDirectory(path: string): Promise<DiscoveryEntry[]>;
 
 	/**
-	 * Reads a file as UTF-8 text.
+	 * Reads a file as UTF-8 text. The decode must be STRICT (STXT-SPEC §3): input that is not
+	 * valid UTF-8 is rejected — the promise rejects, an I/O-level error like a missing file —
+	 * never decoded by silently substituting the invalid sequences with U+FFFD. In Node that
+	 * means decoding the buffer with `new TextDecoder("utf-8", { fatal: true })`, not
+	 * `readFile(path, "utf-8")`, which substitutes.
 	 *
 	 * @param path file to read.
 	 * @returns the text content of the file.

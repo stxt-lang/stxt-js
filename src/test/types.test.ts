@@ -113,6 +113,13 @@ describe("EMAIL type", () => {
 	const good = [
 		"ana@example.com",
 		"a.b+c@sub.example.org",
+		// permissive dots: the full RFC 5322 dot-atom is not replicated (STXT-SCHEMA-SPEC 9.4)
+		"a..b@example.com",
+		".ana@example.com",
+		"a!#$%&'*+/=?^_`{|}~-@x.co",
+		// the limits themselves are legal: local of 64, TLD of 63 (254 has its own test below)
+		`${"a".repeat(64)}@example.com`,
+		`ana@example.${"a".repeat(63)}`,
 		// STXT-SCHEMA-SPEC 9.4: display name followed by the address between angle brackets
 		"Ana García <ana@example.com>",
 		"Ana<ana@example.com>",
@@ -124,6 +131,12 @@ describe("EMAIL type", () => {
 		"@example.com",
 		"ana@localhost",
 		"a b@example.com",
+		// ASCII only: no EAI addresses, no digits in the TLD
+		"josé@example.com",
+		"ana@example.c0m",
+		// over the limits: local of 65, TLD of 64
+		`${"a".repeat(65)}@example.com`,
+		`ana@example.${"a".repeat(64)}`,
 		// the bracketed form needs a name, balanced brackets, a valid address and nothing after
 		"<ana@example.com>",
 		"   <ana@example.com>",
@@ -135,7 +148,20 @@ describe("EMAIL type", () => {
 		"Ana <ana@example.com> extra",
 		"Ana <ana@example.com> <ana@example.com>",
 		"Ana <<ana@example.com>>",
+		"Ana < ana@example.com >",
 	];
+
+	it("accepts an address of exactly 254 characters and rejects one of 255", () => {
+		const local = "a".repeat(64);
+		// local(64) + @ + labels + .com; pad the domain with 'a' labels to hit the length
+		const pad = (n: number) => `${local}@${"a".repeat(n)}.example.com`;
+		const addr254 = pad(254 - local.length - 1 - ".example.com".length);
+		const addr255 = pad(255 - local.length - 1 - ".example.com".length);
+		assert.strictEqual(addr254.length, 254);
+		assert.strictEqual(addr255.length, 255);
+		assert.deepStrictEqual(codes("EMAIL", addr254), []);
+		assert.deepStrictEqual(codes("EMAIL", addr255), ["INVALID_VALUE"]);
+	});
 
 	good.forEach(value => it(`accepts ${JSON.stringify(value)}`, () => {
 		assert.deepStrictEqual(codes("EMAIL", value), []);

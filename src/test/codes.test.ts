@@ -196,6 +196,43 @@ describe("Template blanks are the language blanks only (STXT-TEMPLATE-SPEC 6.2/9
 	});
 });
 
+describe("Cardinality bound: 2^32 - 1 (STXT-SCHEMA-SPEC 10, STXT-TEMPLATE-SPEC 7.1)", () => {
+	function schemaDoc(max: string): string {
+		return [
+			"Schema (@stxt.schema): com.example.card",
+			"\tNode: Root",
+			"\t\tChildren:",
+			"\t\t\tChild: Item",
+			`\t\t\t\tMax: ${max}`,
+			"\tNode: Item",
+			"",
+		].join("\n");
+	}
+
+	it("schema: the bound itself is legal", () => {
+		transformNodeToSchema(root(schemaDoc("4294967295")));
+	});
+
+	it("schema: CARDINALITY_NOT_VALID above the bound", () => {
+		const e = validationCode(() => transformNodeToSchema(root(schemaDoc("4294967296"))));
+		assert.strictEqual(e.code, "CARDINALITY_NOT_VALID");
+		assert.strictEqual(e.validation, true);
+	});
+
+	it("template: the bound itself is legal", () => {
+		const doc = "Template (@stxt.template): com.example.t\n\tStructure >>\n\t\tRoot:\n\t\t\tField: (4294967295) TEXT\n";
+		transformTemplateNodeToSchema(root(doc));
+	});
+
+	it("template: CARDINALITY_NOT_VALID above the bound, also in a range", () => {
+		for (const count of ["(4294967296)", "(0,4294967296)", "(4294967296+)", "(4294967296-)"]) {
+			const doc = `Template (@stxt.template): com.example.t\n\tStructure >>\n\t\tRoot:\n\t\t\tField: ${count} TEXT\n`;
+			const e = validationCode(() => transformTemplateNodeToSchema(root(doc)));
+			assert.strictEqual(e.code, "CARDINALITY_NOT_VALID", count);
+		}
+	});
+});
+
 describe("VALUE_EMPTY: an empty ENUM value (0.10.0)", () => {
 	it("schema: an empty Value: fails at the line of that Value", () => {
 		const doc = [

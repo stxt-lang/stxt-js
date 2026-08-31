@@ -37,4 +37,10 @@ export class Constants {
 	 * {@link ParserOptions.maxInputSize}; -1 disables the limit.
 	 */
 	static readonly DEFAULT_MAX_INPUT_SIZE: number = 10000000;
+	/**
+	 * Upper bound of `Min`/`Max` in a schema and of the numbers of a template cardinality:
+	 * 2^32 - 1 (STXT-SCHEMA-SPEC §10, STXT-TEMPLATE-SPEC §7.1). A greater value is
+	 * `CARDINALITY_NOT_VALID`; "no maximum" is said by omitting `Max`.
+	 */
+	static readonly MAX_CARDINALITY: number = 4294967295;
 }

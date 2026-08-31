@@ -1,5 +1,6 @@
 import { ValidationException } from "../exceptions/ValidationException";
 import { StringUtils } from "../core/StringUtils";
+import { Constants } from "../core/Constants";
 import { ChildLine } from "./ChildLine";
 
 /** Parses the inline value of a child node inside an `@stxt.template`, shaped as `(min,max) TYPE [values]`. */
@@ -110,11 +111,16 @@ export class ChildLineParser {
 		return new ChildLine(type, min, max, values);
 	}
 
-	// num, min and max must be non-negative integers, with no trailing text (STXT-TEMPLATE-SPEC 7.1)
+	// num, min and max must be non-negative integers, with no trailing text, bounded to
+	// 2^32 - 1 like Min/Max in a schema (STXT-TEMPLATE-SPEC 7.1)
 	private static parseCount(num: string, count: string, rawLine: string, lineNumber: number): number {
 		if (!/^\d+$/.test(num)) {
 			throw new ValidationException(lineNumber, "CARDINALITY_NOT_VALID", `Invalid count ${count} in line: ${rawLine}`);
 		}
-		return parseInt(num, 10);
+		const parsed = parseInt(num, 10);
+		if (parsed > Constants.MAX_CARDINALITY) {
+			throw new ValidationException(lineNumber, "CARDINALITY_NOT_VALID", `Invalid count ${count} in line: ${rawLine}`);
+		}
+		return parsed;
 	}
 }

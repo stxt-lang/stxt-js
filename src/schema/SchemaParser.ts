@@ -7,6 +7,7 @@ import { ParseException } from "../exceptions/ParseException";
 import { ValidationException } from "../exceptions/ValidationException";
 import { NamespaceValidator } from "../core/NamespaceValidator";
 import { StringUtils } from "../core/StringUtils";
+import { Constants } from "../core/Constants";
 import { NameNamespaceParser } from "../core/NameNamespaceParser";
 import { TypeRegistry } from "./TypeRegistry";
 
@@ -169,6 +170,11 @@ function getInteger(node: InlineNode, name: string): number | null {
 
 	if (Number.isNaN(parsed)) {
 		throw new ValidationException(node.getLine(), "CARDINALITY_NOT_VALID", `Integer not valid: ${raw}`);
+	}
+
+	// Cardinalities are bounded to 2^32 - 1 (STXT-SCHEMA-SPEC 10)
+	if (parsed > Constants.MAX_CARDINALITY) {
+		throw new ValidationException(node.getLine(), "CARDINALITY_NOT_VALID", `Cardinality above ${Constants.MAX_CARDINALITY}: ${raw}`);
 	}
 
 	return parsed;
