@@ -1,12 +1,16 @@
 import { ValidationException } from "../exceptions/ValidationException";
+import { StringUtils } from "../core/StringUtils";
 import { ChildLine } from "./ChildLine";
 
 /** Parses the inline value of a child node inside an `@stxt.template`, shaped as `(min,max) TYPE [values]`. */
 export class ChildLineParser {
     private constructor() { }
 
+    // STXT-TEMPLATE-SPEC 6.2/9: the trim in the template grammar is the language blank
+    // (U+0020/U+0009) only, never the platform's \s (which also swallows NBSP, U+3000...).
+    // So every \s here is [ \t], including inside the negated class.
     private static readonly CHILD_LINE_PATTERN =
-        /^\s*(?:\(\s*([^()\s][^)]*?)\s*\)\s*)?([^()[\]]*)?(?:\[\s*([^]*?)\s*\]\s*)?\s*$/;
+        /^[ \t]*(?:\([ \t]*([^() \t][^)]*?)[ \t]*\)[ \t]*)?([^()[\]]*)?(?:\[[ \t]*([^]*?)[ \t]*\][ \t]*)?[ \t]*$/;
 
     /**
      * Parses a definition line into its type, its cardinality and its allowed values.
@@ -18,7 +22,7 @@ export class ChildLineParser {
      *         `MIN_GREATER_THAN_MAX` or `VALUE_DUPLICATED` if the line is not valid.
      */
     static parse(rawLine: string, lineNumber: number): ChildLine {
-        if (rawLine.trim().length === 0) {
+        if (StringUtils.trim(rawLine).length === 0) {
             return new ChildLine(null, null, null, null);
         }
 
@@ -28,12 +32,12 @@ export class ChildLineParser {
         }
 
         // m[1]=count, m[2]=type, m[3]=values
-        let type = m[2]?.trim() ?? "";
+        let type = StringUtils.trim(m[2]);
         if (type.length === 0) {
             type = null as any;
         }
 
-        const count = (m[1] ?? "").trim();
+        const count = StringUtils.trim(m[1]);
         let min: number | null = null;
         let max: number | null = null;
 
@@ -57,8 +61,8 @@ export class ChildLineParser {
             if (parts.length !== 2) {
                 throw new ValidationException(lineNumber, "CARDINALITY_NOT_VALID", `Invalid count ${count} in line: ${rawLine}`);
             }
-            const aNum = ChildLineParser.parseCount(parts[0].trim(), count, rawLine, lineNumber);
-            const bNum = ChildLineParser.parseCount(parts[1].trim(), count, rawLine, lineNumber);
+            const aNum = ChildLineParser.parseCount(StringUtils.trim(parts[0]), count, rawLine, lineNumber);
+            const bNum = ChildLineParser.parseCount(StringUtils.trim(parts[1]), count, rawLine, lineNumber);
             // Invalid cardinality when min > max (STXT-TEMPLATE-SPEC 7.1)
             if (aNum > bNum) {
                 throw new ValidationException(lineNumber, "MIN_GREATER_THAN_MAX", `Min ${aNum} greater than Max ${bNum} in line: ${rawLine}`);
@@ -79,7 +83,7 @@ export class ChildLineParser {
             const list: string[] = [];
 
             for (let part of parts) {
-                part = part.trim();
+                part = StringUtils.trim(part);
                 // An empty item ("[a, , b]", "[a, b,]") is an error, as an empty Value: is in a
                 // schema (STXT-TEMPLATE-SPEC 14.14). Only the whole list may be empty ("[]"),
                 // which the template parser reports as VALUES_REQUIRED.

@@ -36,7 +36,7 @@ export function transformTemplateNodeToSchema(node: Node): Schema {
 
 	// The target namespace: required, and with a valid format
 	const targetNamespace = StringUtils.lowerCase(node.getText());
-	if (!targetNamespace || targetNamespace.trim().length === 0) {
+	if (!targetNamespace || StringUtils.trim(targetNamespace).length === 0) {
 		throw new ValidationException(node.getLine(), "TEMPLATE_NAMESPACE_EMPTY", "Template namespace is empty");
 	}
 	if (!NamespaceValidator.isValid(targetNamespace)) {
@@ -123,7 +123,7 @@ function addToSchema(schema: Schema, node: Node): void {
 		// An external node may only declare cardinality: no type, no ENUM values
 		// and no children (STXT-TEMPLATE-SPEC 6.4, 10 and 14.15)
 		const type = cl.getType();
-		if (type && type.trim().length > 0) {
+		if (type && StringUtils.trim(type).length > 0) {
 			throw new ValidationException(node.getLine(), "TYPE_NOT_ALLOWED_IN_EXTERNAL_NAMESPACE", "Not allowed type definition in external namespaces");
 		}
 
@@ -184,7 +184,7 @@ function addToSchema(schema: Schema, node: Node): void {
 			throw new ValidationException(node.getLine(), "REFERENCE_REQUIRED", `Multiple node reference must start with @: ${node.getName()}`);
 		}
 
-		const reference = type.substring(1).trim();
+		const reference = StringUtils.trim(type.substring(1));
 
 		// Reference and explicit type on the same line (STXT-TEMPLATE-SPEC 14.13)
 		const explicitType = referenceType(reference, node.getCanonicalName());
@@ -252,7 +252,7 @@ function referenceType(reference: string, normalizedName: string): string | null
 		return null;
 	}
 
-	const candidate = reference.substring(cut + 1).trim();
+	const candidate = StringUtils.trim(reference.substring(cut + 1));
 	const rest = reference.substring(0, cut);
 
 	if (TypeRegistry.get(candidate) && StringUtils.normalize(rest) === normalizedName) {

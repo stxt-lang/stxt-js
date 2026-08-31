@@ -174,6 +174,28 @@ describe("Template load codes", () => {
 	});
 });
 
+describe("Template blanks are the language blanks only (STXT-TEMPLATE-SPEC 6.2/9)", () => {
+	// A non-ASCII space (NBSP, U+00A0) is content, never a template blank: the grammar
+	// trims/splits on U+0020 and U+0009 only. So `(1) TEXT` is not `(1) TEXT`; the
+	// type becomes " TEXT", an unknown type, exactly as any non-existent type. This
+	// matches Java/Python, which use [ \t] rather than the platform's \s.
+	const NBSP = "\u00A0";
+
+	it("TYPE_NOT_VALID when a NBSP hugs the type instead of a real space", () => {
+		const doc = `Template (@stxt.template): com.example.t\n\tStructure >>\n\t\tRoot:\n\t\t\tField: (1)${NBSP}TEXT\n`;
+		const e = validationCode(() => transformTemplateNodeToSchema(root(doc)));
+		assert.strictEqual(e.code, "TYPE_NOT_VALID");
+		assert.strictEqual(e.validation, true);
+	});
+
+	it("CARDINALITY_NOT_VALID when a NBSP sits inside the cardinality", () => {
+		const doc = `Template (@stxt.template): com.example.t\n\tStructure >>\n\t\tRoot:\n\t\t\tField: (${NBSP}1) TEXT\n`;
+		const e = validationCode(() => transformTemplateNodeToSchema(root(doc)));
+		assert.strictEqual(e.code, "CARDINALITY_NOT_VALID");
+		assert.strictEqual(e.validation, true);
+	});
+});
+
 describe("VALUE_EMPTY: an empty ENUM value (0.10.0)", () => {
 	it("schema: an empty Value: fails at the line of that Value", () => {
 		const doc = [
