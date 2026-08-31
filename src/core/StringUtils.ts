@@ -47,17 +47,6 @@ export class StringUtils {
 		return (s ?? "").replace(this.TRAILING_BLANKS, "");
 	}
 
-	// Used for BASE64 and HEXADECIMAL nodes
-	/**
-	 * Removes every whitespace character of a string.
-	 *
-	 * @param input string to remove the spaces from.
-	 * @returns the string without any whitespace at all.
-	 */
-	static cleanSpaces(input: string): string {
-		return input.replace(/\s+/g, "");
-	}
-
 	// Used to normalize namespaces
 	/**
 	 * Lower-cases a string.
