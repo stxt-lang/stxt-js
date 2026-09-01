@@ -352,7 +352,7 @@ Everything importable from the package:
 
 ## Conformance
 
-`@stxt-lang/core` implements the five STXT specifications at `SPEC_VERSION` (exposed by the package; the package version is independent) and passes every case of the official conformance kit, [`stxt-lang/conformance`](https://github.com/stxt-lang/stxt-lang/tree/master/conformance), across all its profiles: `core`, `schema`, `template`, `discovery` and `text`. The kit is the same one any other implementation can run, which is what makes the three ports interchangeable. What the 1.0 line freezes, and what it does not, is stated at <https://stxt.dev/lang-stability>.
+`@stxt-lang/core` implements the five STXT specifications at `SPEC_VERSION` (exposed by the package; the package version is independent) and passes every case of the official conformance kit, [`stxt-lang/conformance`](https://github.com/stxt-lang/stxt-lang/tree/master/conformance), across all its profiles: `core`, `schema`, `template`, `discovery` and `text`. The kit is the same one any other implementation can run, which is what makes the three ports interchangeable. What the 1.0 line freezes, and what it does not, is stated at <https://stxt.dev/stability>.
 
 ## License
 
