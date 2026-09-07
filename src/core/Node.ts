@@ -110,10 +110,15 @@ export abstract class Node {
 
 	/** @returns the effective namespace of the node: the one it declares or, failing that, the effective namespace of its parent; the empty string if there is none. */
 	getNamespace(): string {
-		if (this.declaredNamespace.length > 0) {
-			return this.declaredNamespace;
+		// Iterative, like getLevel(): a tree built by a program has no nesting limit, and the
+		// recursive walk overflowed the stack at a depth of a few thousand.
+		// eslint-disable-next-line @typescript-eslint/no-this-alias -- cursor of the ancestor walk, not an alias kept around
+		for (let n: Node | null = this; n !== null; n = n.parent) {
+			if (n.declaredNamespace.length > 0) {
+				return n.declaredNamespace;
+			}
 		}
-		return this.parent ? this.parent.getNamespace() : "";
+		return "";
 	}
 
 	// ----------------------------------------------------------------

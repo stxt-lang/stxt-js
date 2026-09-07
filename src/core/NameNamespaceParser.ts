@@ -54,6 +54,6 @@ export class NameNamespaceParser {
 		}
 
 		// Return
-		return new NameNamespace(name, namespace.toLowerCase());
+		return new NameNamespace(name, StringUtils.lowerCase(namespace));
 	}
 }

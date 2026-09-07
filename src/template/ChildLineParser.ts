@@ -7,11 +7,63 @@ import { ChildLine } from "./ChildLine";
 export class ChildLineParser {
 	private constructor() { }
 
-	// STXT-TEMPLATE-SPEC 6.2/9: the trim in the template grammar is the language blank
-	// (U+0020/U+0009) only, never the platform's \s (which also swallows NBSP, U+3000...).
-	// So every \s here is [ \t], including inside the negated class.
-	private static readonly CHILD_LINE_PATTERN =
-		/^[ \t]*(?:\([ \t]*([^() \t][^)]*?)[ \t]*\)[ \t]*)?([^()[\]]*)?(?:\[[ \t]*([^]*?)[ \t]*\][ \t]*)?[ \t]*$/;
+	/**
+	 * Splits a RuleSpec `(count) TYPE [values]` into its three optional parts by a hand-written
+	 * scan, not a regular expression: the pattern used until 2026-09-06 backtracked in O(n³) on
+	 * a line without the closing `]` (a 10 000-character Structure line took minutes). Blanks
+	 * are U+0020/U+0009 only (STXT-TEMPLATE-SPEC 6.2/9), and the rules the pattern enforced
+	 * are kept exactly: the count runs to the first `)` and, trimmed, is neither empty nor
+	 * starts with `(`; the type may not contain `(`, `)` or `]`; the values run from the first
+	 * `[` to the first `]` after it, and only blanks may follow that `]`.
+	 *
+	 * @returns the trimmed parts (null each when absent), or null if the line has not that shape.
+	 */
+	private static splitRuleSpec(rawLine: string): [string | null, string | null, string | null] | null {
+		const n = rawLine.length;
+		let i = 0;
+		while (i < n && StringUtils.isBlank(rawLine[i])) {
+			i++;
+		}
+
+		let count: string | null = null;
+		if (i < n && rawLine[i] === "(") {
+			const close = rawLine.indexOf(")", i + 1);
+			if (close === -1) {
+				return null;
+			}
+			count = StringUtils.trim(rawLine.substring(i + 1, close));
+			if (count.length === 0 || count[0] === "(") {
+				return null;
+			}
+			i = close + 1;
+		}
+
+		const open = rawLine.indexOf("[", i);
+		let type: string | null = rawLine.substring(i, open === -1 ? n : open);
+		if (type.includes("(") || type.includes(")") || type.includes("]")) {
+			return null;
+		}
+		type = StringUtils.trim(type);
+		if (type.length === 0) {
+			type = null;
+		}
+
+		let values: string | null = null;
+		if (open !== -1) {
+			const close = rawLine.indexOf("]", open + 1);
+			if (close === -1) {
+				return null;
+			}
+			values = StringUtils.trim(rawLine.substring(open + 1, close));
+			for (let j = close + 1; j < n; j++) {
+				if (!StringUtils.isBlank(rawLine[j])) {
+					return null;
+				}
+			}
+		}
+
+		return [count, type, values];
+	}
 
 	/**
 	 * Parses a definition line into its type, its cardinality and its allowed values.
@@ -27,18 +79,13 @@ export class ChildLineParser {
 			return new ChildLine(null, null, null, null);
 		}
 
-		const m = ChildLineParser.CHILD_LINE_PATTERN.exec(rawLine);
-		if (!m) {
+		const parts = ChildLineParser.splitRuleSpec(rawLine);
+		if (!parts) {
 			throw new ValidationException(lineNumber, "STRUCTURE_LINE_NOT_VALID", `Line not valid: ${rawLine}`);
 		}
 
-		// m[1]=count, m[2]=type, m[3]=values
-		let type: string | null = StringUtils.trim(m[2]);
-		if (type.length === 0) {
-			type = null;
-		}
-
-		const count = StringUtils.trim(m[1]);
+		const [countPart, type, valuesStr] = parts;
+		const count = countPart ?? "";
 		let min: number | null = null;
 		let max: number | null = null;
 
@@ -77,9 +124,8 @@ export class ChildLineParser {
 
 		// values
 		let values: string[] | null = null;
-		const valuesStr = m[3];
 
-		if (valuesStr !== null && valuesStr !== undefined) {
+		if (valuesStr !== null) {
 			const parts = valuesStr.split(",");
 			const list: string[] = [];
 

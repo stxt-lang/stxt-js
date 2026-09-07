@@ -1,4 +1,5 @@
 import { Node } from "./Node";
+import { RuntimeException } from "../exceptions/RuntimeException";
 
 /**
  * BLOCK text node of the STXT tree (`Name >>`): an ordered list of literal text lines. It has no
@@ -60,11 +61,14 @@ export class TextNode extends Node {
 	 *        themselves; null/undefined empties the node.
 	 */
 	setText(text: string | ReadonlyArray<string> | null | undefined): void {
-		this.lines.length = 0;
 		if (typeof text === "string") {
+			this.lines.length = 0;
 			this.lines.push(...TextNode.splitLines(text));
-		} else if (text) {
-			this.lines.push(...text);
+		} else {
+			// Validated before clearing, so a rejected list leaves the node as it was
+			const lines = text ? text.map(line => TextNode.checkLine(line)) : [];
+			this.lines.length = 0;
+			this.lines.push(...lines);
 		}
 	}
 
@@ -80,10 +84,23 @@ export class TextNode extends Node {
 	/**
 	 * Appends a text line.
 	 *
+	 * A text line is one source line (STXT-SPEC 6): a line break inside it has no
+	 * representation, and written out the part after it would land at level 0 and re-parse as
+	 * another node (structure injected through data). Pass a multi-line text as a string to
+	 * {@link TextNode.setText}, which splits it. A lone CR is content (STXT-SPEC 3) and is accepted.
+	 *
 	 * @param line text line to append.
+	 * @throws RuntimeException with code `LINE_BREAK_NOT_ALLOWED` if the line contains a LF.
 	 */
 	addTextLine(line: string): void {
-		this.lines.push(line);
+		this.lines.push(TextNode.checkLine(line));
+	}
+
+	private static checkLine(line: string): string {
+		if (line.includes("\n")) {
+			throw new RuntimeException("LINE_BREAK_NOT_ALLOWED", "A text line cannot contain a line break");
+		}
+		return line;
 	}
 
 	/** Removes every text line. */

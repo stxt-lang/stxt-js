@@ -135,7 +135,7 @@ describeCorpus("Conformance kit", root => {
 	const read = (file: string) => fs.readFileSync(path.join(directory, file.replace(/\.(schema|template)\.stxt$/, (m) => fs.existsSync(path.join(directory, file)) ? m : ".stxt")), "utf-8");
 
 	it("declares a kit version and the specifications it covers", () => {
-		assert.match(manifest.kit, /^\d+\.\d+$/);
+		assert.match(manifest.kit, /^\d+\.\d+(\.\d+)?$/);
 		assert.strictEqual(manifest.specifications["STXT-SPEC"], "1.0");
 		assert.strictEqual(manifest.specifications["STXT-TREE-SPEC"], "1.0");
 		assert.ok(manifest.cases.length > 0);

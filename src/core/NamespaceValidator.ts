@@ -4,25 +4,47 @@ import { ParseException } from "../exceptions/ParseException";
 export class NamespaceValidator {
 
 	/**
-	 * Format of the logical namespace.
-	 *
-	 * Rules:
-	 * - Lower-case letters, digits and dot only.
-	 * - It may optionally start with '@'.
-	 * - It must be one or more domain-style labels separated by '.':
-	 *   label := [a-z0-9]+
-	 * valid examples: "xxx", "xxx.ddd", "zzz.ttt.ooo", "@xxx", "@xxx.ddd".
-	 */
-	private static readonly NAMESPACE_FORMAT: RegExp = /^@?[a-z0-9]+(\.[a-z0-9]+)+$/;
-
-	/**
 	 * Tells whether a namespace matches the format, without throwing.
+	 *
+	 * Format of the logical namespace (STXT-SPEC 7): lower-case ASCII letters, digits and dot
+	 * only; an optional leading `@` (reserved namespaces); two or more domain-style labels
+	 * `[a-z0-9]+` separated by `.`. Valid examples: "a.b", "com.example.docs", "@stxt.schema".
+	 * Checked by a hand-written scan rather than the regex `^@?[a-z0-9]+(\.[a-z0-9]+)+$`, which
+	 * in engines that implement a repeated group by recursion (Java) overflowed the stack with
+	 * ~2 000 labels; the scan is linear and identical in every port.
 	 *
 	 * @param namespace already normalized namespace to check.
 	 * @returns true if it matches the format; false when it is null, empty or malformed.
 	 */
 	static isValid(namespace: string | null | undefined): boolean {
-		return !!namespace && NamespaceValidator.NAMESPACE_FORMAT.test(namespace);
+		if (!namespace) {
+			return false;
+		}
+		const n = namespace.length;
+		let i = namespace[0] === "@" ? 1 : 0;
+		let labels = 0;
+		for (;;) {
+			const start = i;
+			while (i < n && NamespaceValidator.isLabelChar(namespace.charCodeAt(i))) {
+				i++;
+			}
+			if (i === start) {
+				return false;		// empty label: "", "@", "a.", ".a", "a..b"
+			}
+			labels++;
+			if (i === n) {
+				return labels >= 2;
+			}
+			if (namespace[i] !== ".") {
+				return false;
+			}
+			i++;
+		}
+	}
+
+	// [a-z0-9], ASCII only
+	private static isLabelChar(c: number): boolean {
+		return (c >= 0x61 && c <= 0x7a) || (c >= 0x30 && c <= 0x39);
 	}
 
 	/**
@@ -37,7 +59,7 @@ export class NamespaceValidator {
 			return;
 		}
 
-		if (!NamespaceValidator.NAMESPACE_FORMAT.test(namespace)) {
+		if (!NamespaceValidator.isValid(namespace)) {
 			throw new ParseException(lineNumber, "INVALID_NAMESPACE", `Namespace not valid: ${namespace}`);
 		}
 	}

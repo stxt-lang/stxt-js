@@ -61,9 +61,17 @@ export class InlineNode extends Node {
 	/**
 	 * Sets the inline value of the node.
 	 *
+	 * A value is one source line (STXT-SPEC 5): a line break inside it has no representation,
+	 * and the {@link NodeWriter} would emit it as a new line, which re-parses as another node
+	 * (structure injected through data). A lone CR is content (STXT-SPEC 3) and is accepted.
+	 *
 	 * @param value new value, or null/undefined for none. It is trimmed.
+	 * @throws RuntimeException with code `LINE_BREAK_NOT_ALLOWED` if the value contains a LF.
 	 */
 	setValue(value: string | null | undefined): void {
+		if (value !== null && value !== undefined && value.includes("\n")) {
+			throw new RuntimeException("LINE_BREAK_NOT_ALLOWED", "A node value cannot contain a line break");
+		}
 		this.value = StringUtils.trim(value);
 	}
 
@@ -98,10 +106,18 @@ export class InlineNode extends Node {
 		if (child.getParent() !== null) {
 			throw new RuntimeException("NODE_ALREADY_ATTACHED", `Node '${child.getName()}' already has a parent: detach it first`);
 		}
-		// eslint-disable-next-line @typescript-eslint/no-this-alias -- cursor of the ancestor walk, not an alias kept around
-		for (let p: Node | null = this; p !== null; p = p.getParent()) {
-			if (p === child) {
-				throw new RuntimeException("NODE_CYCLE", `Node '${child.getName()}' cannot be a child of itself or of one of its descendants`);
+		// The child has no parent, so it can only be an ancestor of this node if it is this
+		// node itself or if this node hangs below it, which needs the child to have children.
+		// A childless child (every node the parser attaches) skips the O(depth) walk: a chain
+		// of n nodes is built in O(n) instead of O(n²).
+		if (child === this) {
+			throw new RuntimeException("NODE_CYCLE", `Node '${child.getName()}' cannot be a child of itself or of one of its descendants`);
+		}
+		if (child instanceof InlineNode && child.children.length > 0) {
+			for (let p: Node | null = this.getParent(); p !== null; p = p.getParent()) {
+				if (p === child) {
+					throw new RuntimeException("NODE_CYCLE", `Node '${child.getName()}' cannot be a child of itself or of one of its descendants`);
+				}
 			}
 		}
 

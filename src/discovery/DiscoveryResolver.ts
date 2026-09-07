@@ -74,6 +74,20 @@ export class DiscoveryResolver {
 		options?: DiscoveryOptions
 	) {
 		this.maxAscent = options?.maxAscent ?? DEFAULT_MAX_ASCENT;
+		// An infinite or NaN ascent would turn a cyclic parentOf into an endless loop
+		if (!Number.isInteger(this.maxAscent) || this.maxAscent < 0) {
+			throw new RangeError(`maxAscent must be an integer >= 0, got ${options?.maxAscent}`);
+		}
+	}
+
+	// isDirectory is not supposed to throw (DiscoveryFileSystem contract), but nothing an
+	// adapter throws may escape resolve() (spec section 8): a failure means "not a directory".
+	private async isDirectory(path: string): Promise<boolean> {
+		try {
+			return await this.fs.isDirectory(path);
+		} catch {
+			return false;
+		}
 	}
 
 	/**
@@ -102,7 +116,7 @@ export class DiscoveryResolver {
 			for (let level = 0; level < this.maxAscent && dir !== null; level++) {
 				const candidate = this.fs.join(dir, STXT_DIR);
 
-				if (await this.fs.isDirectory(candidate)) {
+				if (await this.isDirectory(candidate)) {
 					chain.push(candidate);
 				}
 
@@ -116,7 +130,7 @@ export class DiscoveryResolver {
 		const systemDir = this.env.getSystemLevelDir();
 
 		for (const dir of [userDir, systemDir]) {
-			if (dir !== null && !chain.includes(dir) && await this.fs.isDirectory(dir)) {
+			if (dir !== null && !chain.includes(dir) && await this.isDirectory(dir)) {
 				chain.push(dir);
 			}
 		}
@@ -157,7 +171,7 @@ export class DiscoveryResolver {
 		const result: string[] = [];
 
 		for (const dir of dirs) {
-			if (!result.includes(dir) && await this.fs.isDirectory(dir)) {
+			if (!result.includes(dir) && await this.isDirectory(dir)) {
 				result.push(dir);
 			}
 		}
@@ -192,10 +206,10 @@ export class DiscoveryResolver {
 	// directory symlinks, this stops symlink loops and pathological trees from turning
 	// resolution into unbounded recursion or an escaping error.
 	private async collectFiles(dir: string): Promise<string[]> {
-		return this.collectFilesAt(dir, 0);
+		return this.collectFilesAt(dir, 0, new Set());
 	}
 
-	private async collectFilesAt(dir: string, depth: number): Promise<string[]> {
+	private async collectFilesAt(dir: string, depth: number, visited: Set<string>): Promise<string[]> {
 		const files: string[] = [];
 
 		// Safeguard against symlink loops and pathological trees (spec section 10): stop
@@ -203,6 +217,14 @@ export class DiscoveryResolver {
 		if (depth >= DEFAULT_MAX_DESCENT) {
 			return files;
 		}
+
+		// A directory already visited in this level (a cycle the adapter did not cut, or two
+		// entries for one directory) is not descended again: the depth limit bounds the depth,
+		// not the work, and a cycle of breadth 2 would otherwise be entered 2^32 times.
+		if (visited.has(dir)) {
+			return files;
+		}
+		visited.add(dir);
 
 		let entries: DiscoveryEntry[];
 
@@ -216,7 +238,7 @@ export class DiscoveryResolver {
 
 		for (const entry of entries) {
 			if (entry.isDirectory) {
-				files.push(...await this.collectFilesAt(entry.path, depth + 1));
+				files.push(...await this.collectFilesAt(entry.path, depth + 1, visited));
 			} else {
 				files.push(entry.path);
 			}

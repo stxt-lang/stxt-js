@@ -59,9 +59,21 @@ export class Parser {
 	 * @param options the {@link ParserOptions} limits; every omitted one takes its default.
 	 */
 	constructor(options?: ParserOptions) {
-		this.maxNesting = options?.maxNesting ?? Constants.DEFAULT_MAX_NESTING;
-		this.maxLineLength = options?.maxLineLength ?? Constants.DEFAULT_MAX_LINE_LENGTH;
-		this.maxInputSize = options?.maxInputSize ?? Constants.DEFAULT_MAX_INPUT_SIZE;
+		this.maxNesting = Parser.limit("maxNesting", options?.maxNesting, Constants.DEFAULT_MAX_NESTING);
+		this.maxLineLength = Parser.limit("maxLineLength", options?.maxLineLength, Constants.DEFAULT_MAX_LINE_LENGTH);
+		this.maxInputSize = Parser.limit("maxInputSize", options?.maxInputSize, Constants.DEFAULT_MAX_INPUT_SIZE);
+	}
+
+	// A limit is an integer >= 0 or -1 (STXT-SPEC 11.2): NaN would disable it silently and -2
+	// would reject every line, so anything else is rejected here.
+	private static limit(name: string, value: number | undefined, defaultValue: number): number {
+		if (value === undefined) {
+			return defaultValue;
+		}
+		if (!Number.isInteger(value) || value < -1) {
+			throw new RangeError(`${name} must be an integer >= 0, or -1 to disable it, got ${value}`);
+		}
+		return value;
 	}
 
 	/**
@@ -121,17 +133,32 @@ export class Parser {
 	parseResult(content: string): ParseResult {
 		const result = new ParseResult();
 
-		const lines = content.split(/\r?\n/);
-
-		// The final line break terminates the last line, it is not an extra empty line
-		// (this avoids adding a spurious line to a >> block at EOF, spec 10.3)
-		if (lines.length > 0 && lines[lines.length - 1] === "") {
-			lines.pop();
-		}
-
-		this.parseLines(lines, result);
+		// The lines are produced lazily: splitting the whole content up front materialises
+		// every line before maxInputSize can act (STXT-SPEC 11.2: the limit is checked as the
+		// input is consumed), so an input far above the limit cost memory proportional to its
+		// size (210 MB took 2.6 GB before aborting) instead of to the limit.
+		this.parseLines(Parser.lineIterator(content), result);
 
 		return result;
+	}
+
+	/**
+	 * Iterates the lines of a document lazily, at every LF or CRLF (a lone CR is content,
+	 * STXT-SPEC 3). The final line break terminates the last line, it is not an extra empty
+	 * line (that would add a spurious line to a `>>` block at EOF, STXT-SPEC 10.3).
+	 */
+	private static *lineIterator(content: string): Generator<string> {
+		let start = 0;
+		const length = content.length;
+		while (start < length) {
+			let end = content.indexOf("\n", start);
+			if (end === -1) {
+				end = length;
+			}
+			const cut = end > start && content[end - 1] === "\r" ? end - 1 : end;
+			yield content.substring(start, cut);
+			start = end + 1;
+		}
 	}
 
 	/**

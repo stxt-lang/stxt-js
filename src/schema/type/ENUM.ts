@@ -16,10 +16,13 @@ export const ENUM: Type = {
 		}
 
 		const value = node.getText();
-		const allowed = nodeDef.getValues(); // ReadonlySet<string>
 
 		if (!nodeDef.isAllowedValue(value)) {
-			throw new ValidationException(node.getLine(),"INVALID_VALUE",`The value '${value}' not allowed. Only: ${Array.from(allowed).join(", ")}`);
+			// The message deliberately does not list the allowed values: every invalid node
+			// would carry a copy of the whole list, and a large ENUM times a document with
+			// many invalid nodes multiplies memory (100 000 values × 5 000 nodes gave 4 GB of
+			// messages). The list stays available through NodeDefinition.getValues().
+			throw new ValidationException(node.getLine(), "INVALID_VALUE", `The value '${value}' is not one of the allowed values of ${nodeDef.getName()}`);
 		}
 	},
 };
