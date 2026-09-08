@@ -134,10 +134,12 @@ describeCorpus("Conformance kit", root => {
 	// kind in the manifest instead, so their virtual name `<input>.<kind>.stxt` maps back here.
 	const read = (file: string) => fs.readFileSync(path.join(directory, file.replace(/\.(schema|template)\.stxt$/, (m) => fs.existsSync(path.join(directory, file)) ? m : ".stxt")), "utf-8");
 
-	it("declares a kit version and the specifications it covers", () => {
-		assert.match(manifest.kit, /^\d+\.\d+(\.\d+)?$/);
-		assert.strictEqual(manifest.specifications["STXT-SPEC"], "1.0");
-		assert.strictEqual(manifest.specifications["STXT-TREE-SPEC"], "1.0");
+	it("declares a kit date and the dated specifications it covers", () => {
+		const date = /^\d{4}-\d{2}-\d{2}$/;
+		assert.match(manifest.kit, date);
+		for (const s of ["STXT-SPEC", "STXT-TREE-SPEC", "STXT-SCHEMA-SPEC", "STXT-TEMPLATE-SPEC", "STXT-DISCOVERY-SPEC"]) {
+			assert.match(manifest.specifications[s], date, s);
+		}
 		assert.ok(manifest.cases.length > 0);
 	});
 

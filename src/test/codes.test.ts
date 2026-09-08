@@ -1,7 +1,6 @@
 import * as assert from "assert";
 import { Parser } from "../core/Parser";
 import { Node } from "../core/Node";
-import { InlineNode } from "../core/InlineNode";
 import { ParseException } from "../exceptions/ParseException";
 import { ValidationException } from "../exceptions/ValidationException";
 import { SchemaProviderMemory } from "../schema/SchemaProviderMemory";
@@ -293,20 +292,21 @@ describe("Message framing (0.10.0)", () => {
 });
 
 describe("SPEC_VERSION", () => {
-	it("is exported from the package entry point and equals Constants.SPEC_VERSION", () => {
-		assert.strictEqual(SPEC_VERSION, "1.0");
+	it("is exported from the package entry point, equals Constants.SPEC_VERSION and is a date", () => {
+		assert.match(SPEC_VERSION, /^\d{4}-\d{2}-\d{2}$/);
 		assert.strictEqual(Constants.SPEC_VERSION, SPEC_VERSION);
-		assert.strictEqual(all.SPEC_VERSION, "1.0");
+		assert.strictEqual(all.SPEC_VERSION, SPEC_VERSION);
 	});
 
-	it("equals Metadata/Version of STXT-SPEC in stxt-lang (es/stxt-core-ref.stxt)", () => {
-		const file = path.join(findStxtLang(), "es", "stxt-core-ref.stxt");
-		const root = new Parser().parse(fs.readFileSync(file, "utf-8"))[0] as InlineNode;
-		const metadata = root.getChild("Metadata") as InlineNode;
-		const version = metadata.getChild("Version") as InlineNode | null;
+	// The specifications carry a date and a status, not a version number (STXT-SPEC §1.1), and
+	// conformance is declared against the kit: the constant is the date the kit pins for
+	// STXT-SPEC, not the Last modif of the specification, so an editorial change of the text
+	// does not touch the library.
+	it("equals the date the conformance kit pins for STXT-SPEC (conformance/manifest.json)", () => {
+		const file = path.join(findStxtLang(), "conformance", "manifest.json");
+		const manifest = JSON.parse(fs.readFileSync(file, "utf-8")) as { specifications: Record<string, string> };
 
-		assert.ok(version, "STXT-SPEC has no Metadata/Version");
-		assert.strictEqual(Constants.SPEC_VERSION, version.getValue());
+		assert.strictEqual(Constants.SPEC_VERSION, manifest.specifications["STXT-SPEC"]);
 	});
 });
 

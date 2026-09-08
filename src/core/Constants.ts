@@ -1,13 +1,14 @@
 /** Characters and sizes fixed by STXT-SPEC that the parser and the writer share. */
 export class Constants {
 	/**
-	 * Version of STXT-SPEC (the base syntax) this library implements; "STXT 1.0" on its own means
-	 * this number (STXT-SPEC §1.1). Each specification is versioned independently, so the schema,
-	 * template, tree and discovery specs may carry other numbers. It is distinct from the version
-	 * of the package: the package may be released many times against the same specification
-	 * version.
+	 * Date of the STXT-SPEC text (the base syntax) this library implements, `YYYY-MM-DD`. The
+	 * specifications carry no version number: each one has a date and a status (STXT-SPEC §1.1),
+	 * and the date pinned here is the one the conformance kit certifies for STXT-SPEC, not the
+	 * `Last modif` of the specification, so an editorial change of the text does not move it. It
+	 * is distinct from the version of the package: the package may be released many times against
+	 * the same specification text.
 	 */
-	static readonly SPEC_VERSION: string = "1.0";
+	static readonly SPEC_VERSION: string = "2026-09-07";
 	/** Character that opens a comment line. */
 	static readonly COMMENT_CHAR: string = "#";
 	/** Number of spaces that make up one indentation level. */
