@@ -52,6 +52,8 @@ interface Profile {
 /** The fields every case shares; what each category adds lives in its variant below. */
 interface CaseBase {
 	id: string;
+	/** `SHOULD` or `MAY` when the rule behind the case is one; absent means `MUST`. */
+	requirement?: string;
 	spec: string;
 	description: string;
 	input: string;
@@ -141,6 +143,15 @@ describeCorpus("Conformance kit", root => {
 			assert.match(manifest.specifications[s], date, s);
 		}
 		assert.ok(manifest.cases.length > 0);
+	});
+
+	// The official ports run every case, whatever its level; the level only has to be well formed.
+	it("marks the optional cases with a requirement level of SHOULD or MAY", () => {
+		for (const c of manifest.cases) {
+			if (c.requirement !== undefined) {
+				assert.ok(c.requirement === "SHOULD" || c.requirement === "MAY", `${c.id}: requirement ${c.requirement}`);
+			}
+		}
 	});
 
 	it("declares cumulative profiles that cover every category", () => {
