@@ -90,6 +90,22 @@ export class DiscoveryResolver {
 		}
 	}
 
+	// A candidate .stxt that is itself a symbolic link forms no project level (spec sections
+	// 4.1 and 10). The operation is optional in the adapter (an in-memory tree has no links):
+	// missing counts as false. Guarded like isDirectory, but an adapter that throws here is
+	// treated as "a link" — the conservative answer: the candidate is skipped.
+	private async isSymbolicLink(path: string): Promise<boolean> {
+		if (this.fs.isSymbolicLink === undefined) {
+			return false;
+		}
+
+		try {
+			return await this.fs.isSymbolicLink(path);
+		} catch {
+			return true;
+		}
+	}
+
 	/**
 	 * Builds the resolution chain of a document (STXT-DISCOVERY-SPEC sections 4 and 6)
 	 * without loading any definition.
@@ -116,7 +132,11 @@ export class DiscoveryResolver {
 			for (let level = 0; level < this.maxAscent && dir !== null; level++) {
 				const candidate = this.fs.join(dir, STXT_DIR);
 
-				if (await this.isDirectory(candidate)) {
+				// A linked .stxt forms no level (spec sections 4.1 and 10): the ancestors are
+				// written by whoever created the project, and a link would take the resolution
+				// into a foreign tree. Asked before isDirectory, which follows links. The user
+				// and system levels below, and STXT_PATH, are followed: the user chooses them.
+				if (!(await this.isSymbolicLink(candidate)) && await this.isDirectory(candidate)) {
 					chain.push(candidate);
 				}
 

@@ -1,6 +1,6 @@
 import * as assert from "assert";
 import { MemoryFileSystem, TestEnvironment } from "./discoveryMemory";
-import { DiscoveryEntry } from "../discovery/DiscoveryFileSystem";
+import { DiscoveryEntry, DiscoveryFileSystem } from "../discovery/DiscoveryFileSystem";
 import { DiscoveryError } from "../discovery/DiscoveryError";
 import { DiscoveryResolver } from "../discovery/DiscoveryResolver";
 
@@ -399,6 +399,87 @@ describe("DiscoveryResolver", () => {
 			resolver.clearCache();
 			const third = await resolver.resolve("/repo");
 			assert.ok(third.getSchema("com.acme.a"), "reload after clearCache keeps working");
+		});
+	});
+
+	describe("symbolic links at the level itself (spec sections 4.1, 4.2, 6 and 10)", () => {
+
+		// An in-memory file system that reports some paths as symbolic links.
+		class LinkedMemoryFileSystem extends MemoryFileSystem {
+			constructor(files: Record<string, string>, private readonly links: string[]) {
+				super(files);
+			}
+
+			async isSymbolicLink(path: string): Promise<boolean> {
+				return this.links.includes(path);
+			}
+		}
+
+		it("an ancestor .stxt that is a symbolic link forms no project level", async () => {
+			const fs = new LinkedMemoryFileSystem({
+				"/repo/.stxt/a.stxt": template("com.acme.a", "A"),
+				"/repo/web/.stxt/b.stxt": template("com.acme.b", "B"),
+			}, ["/repo/.stxt"]);
+			const resolver = new DiscoveryResolver(fs, new TestEnvironment());
+
+			assert.deepStrictEqual(await resolver.resolveChain("/repo/web/docs"), ["/repo/web/.stxt"]);
+
+			const result = await resolver.resolve("/repo/web/docs");
+
+			assert.ok(result.getSchema("com.acme.b"), "the real level loads");
+			assert.ok(!result.getSchema("com.acme.a"), "the linked level is not loaded");
+			assert.strictEqual(result.getErrors().length, 0);
+		});
+
+		it("the user and system levels are followed when they are symbolic links", async () => {
+			const fs = new LinkedMemoryFileSystem({
+				"/home/ana/.stxt/b.stxt": template("org.ana.b", "B"),
+				"/etc/stxt/c.stxt": template("org.corp.c", "C"),
+			}, ["/home/ana/.stxt", "/etc/stxt"]);
+			const env = new TestEnvironment(null, "/home/ana/.stxt", "/etc/stxt");
+			const resolver = new DiscoveryResolver(fs, env);
+
+			assert.deepStrictEqual(await resolver.resolveChain("/repo"), ["/home/ana/.stxt", "/etc/stxt"]);
+			assert.ok((await resolver.resolve("/repo")).getSchema("org.ana.b"));
+		});
+
+		it("a linked $HOME/.stxt is the user level of a document under the home, not a project level", async () => {
+			const fs = new LinkedMemoryFileSystem({
+				"/home/ana/.stxt/b.stxt": template("org.ana.b", "B"),
+				"/home/.stxt/h.stxt": template("org.home.h", "H"),
+			}, ["/home/ana/.stxt"]);
+			const env = new TestEnvironment(null, "/home/ana/.stxt", null);
+			const resolver = new DiscoveryResolver(fs, env);
+
+			// Were the link accepted by the ascent, it would come before /home/.stxt.
+			assert.deepStrictEqual(await resolver.resolveChain("/home/ana/notes"), ["/home/.stxt", "/home/ana/.stxt"]);
+		});
+
+		it("an STXT_PATH entry is followed when it is a symbolic link", async () => {
+			const fs = new LinkedMemoryFileSystem({ "/opt/defs/a.stxt": template("com.acme.a", "A") }, ["/opt/defs"]);
+			const resolver = new DiscoveryResolver(fs, new TestEnvironment(["/opt/defs"]));
+
+			assert.deepStrictEqual(await resolver.resolveChain("/repo"), ["/opt/defs"]);
+		});
+
+		it("an adapter without isSymbolicLink behaves as before: nothing is a link", async () => {
+			const fs: DiscoveryFileSystem = new MemoryFileSystem({ "/repo/.stxt/a.stxt": template("com.acme.a", "A") });
+			assert.strictEqual(fs.isSymbolicLink, undefined);
+
+			const resolver = new DiscoveryResolver(fs, new TestEnvironment());
+
+			assert.deepStrictEqual(await resolver.resolveChain("/repo"), ["/repo/.stxt"]);
+		});
+
+		it("an adapter that throws in isSymbolicLink skips the candidate instead of escaping", async () => {
+			const fs = new (class extends MemoryFileSystem {
+				async isSymbolicLink(): Promise<boolean> {
+					throw new Error("lstat failed");
+				}
+			})({ "/repo/.stxt/a.stxt": template("com.acme.a", "A") });
+			const resolver = new DiscoveryResolver(fs, new TestEnvironment());
+
+			assert.deepStrictEqual(await resolver.resolveChain("/repo"), []);
 		});
 	});
 });

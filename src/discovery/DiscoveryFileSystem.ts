@@ -20,12 +20,26 @@ export interface DiscoveryEntry {
  */
 export interface DiscoveryFileSystem {
 	/**
-	 * Whether a path exists and is a directory.
+	 * Whether a path exists and is a directory. Follows symbolic links: a linked user level,
+	 * system level or `STXT_PATH` entry is a directory (STXT-DISCOVERY-SPEC sections 4.2 and 6).
 	 *
 	 * @param path path to check.
 	 * @returns true if the path is an existing directory; false otherwise (including I/O errors).
 	 */
 	isDirectory(path: string): Promise<boolean>;
+
+	/**
+	 * Whether a path is a symbolic link — or, on Windows, a junction where the platform tells
+	 * them apart — whatever it points to and whether or not the target exists. Only consulted
+	 * during the project-level ascent (STXT-DISCOVERY-SPEC section 4.1): the `.stxt` of an
+	 * ancestor that is itself a link forms no level. Optional: an adapter over an abstraction
+	 * with no links (an in-memory tree, a ZIP) may omit it, which counts as false, and so does
+	 * every adapter written before it existed.
+	 *
+	 * @param path path to check.
+	 * @returns true if the path is a symbolic link; false otherwise (including I/O errors).
+	 */
+	isSymbolicLink?(path: string): Promise<boolean>;
 
 	/**
 	 * Lists the immediate entries of a directory.
