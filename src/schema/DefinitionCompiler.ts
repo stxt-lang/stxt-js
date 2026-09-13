@@ -11,7 +11,7 @@ import { SchemaValidator } from "./SchemaValidator";
  * providers (a document each), UnifiedSchemaProvider (several roots per file) and
  * discovery. A definition node is validated against the meta-schema of its kind and,
  * only when valid, transformed into a Schema; a definition that does not validate is
- * never registered anywhere — the first validation finding is thrown instead.
+ * never registered anywhere, the first validation finding is thrown instead.
  * Mirrors stxt-impl/schema/definition_compiler.txt.
  */
 

@@ -6,7 +6,7 @@ import type { InlineNode } from "./InlineNode";
 /**
  * Node of the STXT tree: what INLINE nodes ({@link InlineNode}) and BLOCK text nodes
  * ({@link TextNode}) have in common. Those two are the only forms, and each one owns what is
- * really its own — only an `InlineNode` has a value and children (and so the child lookups); only
+ * really its own, only an `InlineNode` has a value and children (and so the child lookups); only
  * a `TextNode` has text lines. Code that walks a tree asks for the form
  * (`node instanceof InlineNode`), the same way the canonical tree of STXT-TREE-SPEC has
  * `children` only for inline nodes.

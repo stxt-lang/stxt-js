@@ -5,8 +5,8 @@ import { StringUtils } from "./StringUtils";
 
 /**
  * INLINE node of the STXT tree (`Name: value`): an optional inline value and an ordered list of
- * children. It is the only form that has children — and so the only one with child lookups
- * ({@link InlineNode.getChild}, {@link InlineNode.getChildrenByName}) — and the only one that can
+ * children. It is the only form that has children, and so the only one with child lookups
+ * ({@link InlineNode.getChild}, {@link InlineNode.getChildrenByName}), and the only one that can
  * create them ({@link InlineNode.addInlineNode}, {@link InlineNode.addTextNode}).
  *
  * Overloads with two strings always take the second one as the *content* (the value); the

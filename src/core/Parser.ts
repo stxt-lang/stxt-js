@@ -124,7 +124,7 @@ export class Parser {
 
 	/**
 	 * Multi-error mode: parses the whole content collecting every error found (both syntax and
-	 * validation) without bailing out on the first one — except a {@link LimitException}, which
+	 * validation) without bailing out on the first one, except a {@link LimitException}, which
 	 * aborts and is in every case the last error collected. See {@link ParseResult}.
 	 *
 	 * @param content the whole STXT document to parse.
@@ -162,7 +162,7 @@ export class Parser {
 	}
 
 	/**
-	 * Streaming mode: input from a line iterable (each item one line, without its line break —
+	 * Streaming mode: input from a line iterable (each item one line, without its line break,
 	 * e.g. a generator over a file read lazily), and nothing retained: no nodes, no errors.
 	 * Results reach the program only through the registered {@link StreamObserver}s (each
 	 * completed root by `onRootNode()`, each error by `onError()`), so memory holds one root
@@ -219,7 +219,7 @@ export class Parser {
 	/**
 	 * Processes one source line. Errors of this line are collected into the result and the
 	 * traversal continues with the next line: returns true to keep going, false when a limit
-	 * aborted the parse (its error is already emitted) — parseLines stops on it.
+	 * aborted the parse (its error is already emitted), parseLines stops on it.
 	 */
 	private processLine(lineString: string, lineNumber: number, stack: Node[], result: ParseResult | null): boolean {
 		try {

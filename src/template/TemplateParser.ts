@@ -143,7 +143,7 @@ function addToSchema(schema: Schema, node: Node): void {
 
 /**
  * Cross-namespace node (STXT-TEMPLATE-SPEC 6.4, 10 and 14.15): not defined locally; it may only
- * declare cardinality — no type, no ENUM values and no children.
+ * declare cardinality, no type, no ENUM values and no children.
  */
 function validateExternalNode(node: InlineNode, cl: ChildLine): void {
 	const type = cl.getType();

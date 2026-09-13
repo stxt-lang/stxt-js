@@ -9,14 +9,14 @@ import { ParseException } from "../exceptions/ParseException";
  * with {@link Parser.registerStreamObserver}; a class may implement {@link Observer},
  * StreamObserver or both.
  *
- * It fires in every entry point — `parse()`, `parseResult()` and `parseStream()` — exactly the
+ * It fires in every entry point, `parse()`, `parseResult()` and `parseStream()`, exactly the
  * same way; what `parseStream()` adds is that the parser retains nothing, so there these
  * callbacks are the only way to get the results.
  */
 export interface StreamObserver {
 	/**
-	 * Called when a root (level 0) node is closed, with its whole subtree already complete —
-	 * children, values, text lines — and its validators already run. In
+	 * Called when a root (level 0) node is closed, with its whole subtree already complete,
+	 * children, values, text lines, and its validators already run. In
 	 * {@link Parser.parseStream} the parser releases the node right after this call, so the
 	 * memory in use is one root tree at a time.
 	 *

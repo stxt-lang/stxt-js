@@ -51,7 +51,7 @@ const DEFAULT_MAX_DESCENT = 32;
  * in-memory tree).
  *
  * Loaded levels are cached by directory: resolving many documents that share levels loads
- * each directory once, which is the sharing that STXT-DISCOVERY-SPEC section 7 allows —
+ * each directory once, which is the sharing that STXT-DISCOVERY-SPEC section 7 allows,
  * a level's content does not depend on which document is being resolved. Call
  * {@link clearCache} when the underlying files may have changed.
  */
@@ -93,7 +93,7 @@ export class DiscoveryResolver {
 	// A candidate .stxt that is itself a symbolic link forms no project level (spec sections
 	// 4.1 and 10). The operation is optional in the adapter (an in-memory tree has no links):
 	// missing counts as false. Guarded like isDirectory, but an adapter that throws here is
-	// treated as "a link" — the conservative answer: the candidate is skipped.
+	// treated as "a link", the conservative answer: the candidate is skipped.
 	private async isSymbolicLink(path: string): Promise<boolean> {
 		if (this.fs.isSymbolicLink === undefined) {
 			return false;
@@ -330,7 +330,7 @@ export class DiscoveryResolver {
 		const existing = level.definitions.get(key);
 
 		// Spec section 8: on a same-level duplicate, never silently pick one of the
-		// definitions — the namespace has no active definition while the conflict exists.
+		// definitions, the namespace has no active definition while the conflict exists.
 		if (level.conflictedNamespaces.has(key) || existing) {
 			if (existing) {
 				level.definitions.delete(key);

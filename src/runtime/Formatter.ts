@@ -26,7 +26,7 @@ export interface FormatResult {
 
 /**
  * Reformats an STXT document **line by line, over the original text**, so that nothing the
- * parse tree does not hold — comments, blank lines, the exact content of text blocks — is lost.
+ * parse tree does not hold, comments, blank lines, the exact content of text blocks, is lost.
  * This is what distinguishes it from {@link NodeWriter}, which re-serializes the tree and
  * therefore drops comments and blank lines.
  *
@@ -36,8 +36,8 @@ export interface FormatResult {
  * - A line that **opens a node** is rendered in canonical form: the indentation of its level in
  *   the requested style, the name as parsed, the namespace only where the source wrote it (a
  *   child repeating its parent's namespace is redundant but legal, and dropping it would be an
- *   edit, not a reformat), `: value` with exactly one space — or a bare `:` when there is no
- *   value, so container nodes do not end in a stray space — or ` >>` for a block.
+ *   edit, not a reformat), `: value` with exactly one space, or a bare `:` when there is no
+ *   value, so container nodes do not end in a stray space, or ` >>` for a block.
  * - A **text line of a block** gets the indentation of the block (its level plus one) in the
  *   requested style, followed by its content; any indentation the line had beyond the block's
  *   is content (STXT-SPEC §10.2, relative indentation is preserved) and is kept exactly. A
@@ -45,8 +45,8 @@ export interface FormatResult {
  *   the source (STXT-SPEC §10.3), so it is written with the indentation of the block too: the
  *   block reads as one piece. The final blank lines of a block are not content (STXT-SPEC
  *   §10.3: the parser drops them when the block closes) and fall under the next rule.
- * - Every **other line** — a comment, a blank line outside a block, or a line the parse tree
- *   does not describe because of a syntax error — is kept as the author wrote it, except that
+ * - Every **other line**, a comment, a blank line outside a block, or a line the parse tree
+ *   does not describe because of a syntax error, is kept as the author wrote it, except that
  *   its trailing blanks are removed and the whole indentation units at its start are converted
  *   one for one to the requested style (a tab or four spaces in either style count as a unit;
  *   whatever follows the last whole unit, including a remainder that is not a whole unit, is
@@ -165,7 +165,7 @@ export class Formatter {
 	/**
 	 * @param line a line.
 	 * @param position a position in it.
-	 * @returns the length of the whole indentation unit — a tab or four spaces — that starts at
+	 * @returns the length of the whole indentation unit, a tab or four spaces, that starts at
 	 *          `position`, or 0 if none does.
 	 */
 	private static unitAt(line: string, position: number): number {

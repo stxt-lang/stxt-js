@@ -9,7 +9,7 @@ const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789
 
 /**
  * Membership test for the standard alphabet, applied to the padding-stripped core. A plain
- * character class with a single `*`, which matches in linear time with no backtracking —
+ * character class with a single `*`, which matches in linear time with no backtracking,
  * unlike a grouped-repetition shape such as `(?:[A-Za-z0-9+/]{4})*`, whose backtracking state
  * overflows V8's call stack (`RangeError`) on inputs of a few million characters, still inside
  * the default `maxInputSize`.
@@ -18,8 +18,8 @@ const ALPHABET_ONLY = /^[A-Za-z0-9+/]*$/;
 
 /**
  * STXT-SCHEMA-SPEC 9.5: standard Base64 (not URL-safe), padding optional, no leftover bits,
- * never empty. The shape is checked in linear time — strip the optional trailing padding,
- * enforce the padding/length rule, verify the core belongs to the standard alphabet — plus
+ * never empty. The shape is checked in linear time, strip the optional trailing padding,
+ * enforce the padding/length rule, verify the core belongs to the standard alphabet, plus
  * the leftover-bits rule; never the platform decoder, which silently ignores characters
  * outside the alphabet.
  *
