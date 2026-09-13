@@ -74,7 +74,7 @@ Use `parser.parse(text)` instead if you prefer an exception (`ParseException`) o
 
 ## Working with the tree
 
-`Node` is an abstract class with exactly two forms, and each one owns only what is really its own: `InlineNode` (`Name: value`) has the optional value, the children and the child lookups (`getChildren()`, `getChild(name)`, `getChildrenByName(name)`); `TextNode` (`Name >>`) has the literal text lines and nothing else. What they share lives in `Node`: name and canonical name, declared and effective namespace, source line, parent (always an `InlineNode`) and `getText()` — the value of an inline node or the joined lines of a text node. Walking a tree therefore asks for the form (`node instanceof InlineNode`), the same way the canonical tree of STXT-TREE-SPEC has `children` only for inline nodes.
+`Node` is an abstract class with exactly two forms, and each one owns only what is really its own: `InlineNode` (`Name: value`) has the optional value, the children and the child lookups (`getChildren()`, `getChild(name)`, `getChildrenByName(name)`); `TextNode` (`Name >>`) has the literal text lines and nothing else. What they share lives in `Node`: name and canonical name, declared and effective namespace, source line, parent (always an `InlineNode`) and `getText()`, the value of an inline node or the joined lines of a text node. Walking a tree therefore asks for the form (`node instanceof InlineNode`), the same way the canonical tree of STXT-TREE-SPEC has `children` only for inline nodes.
 
 Trees are mutable and keep their own integrity: every node knows its parent, `addChild` links both ends and refuses a node that already has one, and `removeChild` / `detach()` undo it. Levels are derived from the chain of parents; the source line is only set by the parser.
 
@@ -90,7 +90,7 @@ const body = email.addTextNode('Body', 'Hi Bob,\n\nSee attached.');
 body.getParent() === email;   // true
 body.getLevel();              // 1
 to.getNamespace();            // "com.example.docs", inherited
-to.getDeclaredNamespace();    // "" — it declares none
+to.getDeclaredNamespace();    // "": it declares none
 
 // Reorganise: move "To" to the front
 to.detach();
@@ -157,11 +157,11 @@ Available value types: `INLINE`, `BLOCK`, `TEXT`, `MARKDOWN`, `BOOLEAN`, `INTEGE
 
 Definitions live in `.stxt/` directories. For a given document the resolution chain is, highest precedence first:
 
-1. every ancestor `.stxt/` directory, nearest first — the ascent does **not** stop at the first one, so in a monorepo both the subproject's and the repo root's participate;
+1. every ancestor `.stxt/` directory, nearest first; the ascent does **not** stop at the first one, so in a monorepo both the subproject's and the repo root's participate;
 2. the user level, `$HOME/.stxt` (`%USERPROFILE%\.stxt` on Windows);
 3. the system level, `/etc/stxt` (`%ProgramData%\stxt` on Windows).
 
-Precedence is **per namespace**: the nearest level that defines a namespace wins, and the rest of the chain still contributes the namespaces that level does not define. Defining one namespace twice at the same level is a resolution error, and leaves that namespace without an active definition. When `STXT_PATH` is defined it replaces the whole chain — useful in CI and tests.
+Precedence is **per namespace**: the nearest level that defines a namespace wins, and the rest of the chain still contributes the namespaces that level does not define. Defining one namespace twice at the same level is a resolution error, and leaves that namespace without an active definition. When `STXT_PATH` is defined it replaces the whole chain, which is useful in CI and tests.
 
 The resolver never touches the file system or the environment itself: you inject a `DiscoveryFileSystem` and a `DiscoveryEnvironment`. That is what lets the same logic run over Node's `fs`, over an editor's virtual file system (`vscode.workspace.fs`) or over an in-memory tree in a test. Here are the Node adapters:
 
@@ -219,7 +219,7 @@ class NodeEnvironment implements DiscoveryEnvironment {
 }
 ```
 
-With those in place, resolving a document and validating it is two steps — and note that `DiscoveryResult` implements `SchemaProvider`, so it goes straight into the validator:
+With those in place, resolving a document and validating it is two steps, because `DiscoveryResult` implements `SchemaProvider` and goes straight into the validator:
 
 ```ts
 import { Parser, SchemaValidator } from '@stxt-lang/core';
@@ -256,11 +256,11 @@ result.getActiveDefinitions();      // one entry per namespace, precedence appli
 result.getAllSchemas();             // just the schemas of the above
 ```
 
-Levels are cached by directory, so resolving many documents that share ancestors reads each `.stxt/` once. Call `resolver.clearCache()` when the definition files may have changed — from a file watcher, for instance.
+Levels are cached by directory, so resolving many documents that share ancestors reads each `.stxt/` once. Call `resolver.clearCache()` when the definition files may have changed (from a file watcher, for instance).
 
 ## Observing the parse
 
-`Observer` receives streaming callbacks while the document is parsed — useful for syntax highlighting, indexes or any per-line bookkeeping.
+`Observer` receives streaming callbacks while the document is parsed, which is useful for syntax highlighting, indexes or any per-line bookkeeping.
 
 ```ts
 import { Parser, Observer, Node, Line } from '@stxt-lang/core';
@@ -282,7 +282,7 @@ parser.parseResult(text);
 ```
 
 `StreamObserver` watches the results instead of the process: each completed root node and each
-error, in every mode. With `parseStream` the parser retains nothing — no nodes, no errors — so a
+error, in every mode. With `parseStream` the parser retains nothing (no nodes, no errors), so a
 file larger than memory can be processed one root tree at a time:
 
 ```ts
@@ -320,8 +320,8 @@ const doc = NodeWriter.toSTXTDocs(result.getNodes(), IndentStyle.SPACES_4);
 
 `NodeWriter` re-serializes the tree, so comments and blank lines are gone. To reformat a document
 **keeping everything the author wrote**, use `Formatter`: it rewrites the original text line by
-line — node lines in canonical form, block lines re-indented to their block, comments and blank
-lines kept with their indentation units converted — and reports the syntax errors it met, so the
+line (node lines in canonical form, block lines re-indented to their block, comments and blank
+lines kept with their indentation units converted) and reports the syntax errors it met, so the
 caller decides what to do with a document that does not parse. It is the formatter behind
 `stxt format`, the VS Code extension and the playground.
 
@@ -334,21 +334,21 @@ if (errors.length === 0) {
 }
 ```
 
-`Formatter.format` takes the same limits as the parser as an optional third argument —
-`Formatter.format(source, IndentStyle.TABS, { maxInputSize: -1 })` — since formatting parses
+`Formatter.format` takes the same limits as the parser as an optional third argument,
+`Formatter.format(source, IndentStyle.TABS, { maxInputSize: -1 })`, since formatting parses
 the document with them (STXT-SPEC §11.2).
 
 ## API surface
 
 Everything importable from the package:
 
-- **Parsing** — `Node`, `InlineNode`, `TextNode`, `Parser`, `ParserOptions`, `ParseResult`, `Line`, `Constants`, `parseLine`, `StringUtils`
-- **Exceptions** — `ParseException`, `ValidationException`, `LimitException`, `RuntimeException`
-- **Extension points** — `Observer`, `StreamObserver`, `Validator`
-- **Schemas** — `Schema`, `SchemaValidator`, `SchemaProvider`, `SchemaProviderMemory`, `SchemaProviderMeta`, `NodeDefinition`, `ChildDefinition`, `TypeRegistry`, `Type`, `transformNodeToSchema`
-- **Templates** — `transformTemplateNodeToSchema`, `TEMPLATE_NAMESPACE`, `TemplateSchemaProviderMemory`, `MetaTemplateSchemaProvider`
-- **Runtime** — `UnifiedSchemaProvider`, `NodeWriter`, `IndentStyle`, `Formatter`, `FormatResult`, `toCanonicalTree`, `toCanonicalJson`
-- **Discovery** — `DiscoveryResolver`, `DiscoveryOptions`, `DiscoveryResult`, `DiscoveryDefinition`, `DiscoveryLevel`, `DiscoveryError`, `DiscoveryFileSystem`, `DiscoveryEntry`, `DiscoveryEnvironment`
+- **Parsing**: `Node`, `InlineNode`, `TextNode`, `Parser`, `ParserOptions`, `ParseResult`, `Line`, `Constants`, `parseLine`, `StringUtils`
+- **Exceptions**: `ParseException`, `ValidationException`, `LimitException`, `RuntimeException`
+- **Extension points**: `Observer`, `StreamObserver`, `Validator`
+- **Schemas**: `Schema`, `SchemaValidator`, `SchemaProvider`, `SchemaProviderMemory`, `SchemaProviderMeta`, `NodeDefinition`, `ChildDefinition`, `TypeRegistry`, `Type`, `transformNodeToSchema`
+- **Templates**: `transformTemplateNodeToSchema`, `TEMPLATE_NAMESPACE`, `TemplateSchemaProviderMemory`, `MetaTemplateSchemaProvider`
+- **Runtime**: `UnifiedSchemaProvider`, `NodeWriter`, `IndentStyle`, `Formatter`, `FormatResult`, `toCanonicalTree`, `toCanonicalJson`
+- **Discovery**: `DiscoveryResolver`, `DiscoveryOptions`, `DiscoveryResult`, `DiscoveryDefinition`, `DiscoveryLevel`, `DiscoveryError`, `DiscoveryFileSystem`, `DiscoveryEntry`, `DiscoveryEnvironment`
 
 ## Conformance
 
@@ -356,4 +356,4 @@ Everything importable from the package:
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT, see [LICENSE](LICENSE).
