@@ -1,15 +1,9 @@
 # @stxt-lang/core
 
-Parser and schema validator for **STXT**, an indentation-based structured-text language.
+Parser and schema validator for **STXT**, in TypeScript.
 
-STXT is a plain-text language for writing structured, semantic documents: no braces, no closing tags, just indentation. It is designed to be equally readable by humans and by machines, and it comes with an optional schema layer so documents can be validated.
-
-- Website and language reference: <https://stxt.dev>
-- VSCode extension: [STXT Language](https://marketplace.visualstudio.com/items?itemName=stxt-lang.stxt)
-- Java implementation: [`dev.stxt:stxt-core`](https://central.sonatype.com/artifact/dev.stxt/stxt-core) on Maven Central
-- Python implementation: [`stxt`](https://pypi.org/project/stxt/) on PyPI
-
-## What STXT looks like
+STXT is a **Human-First** language, designed for documents and structured data: indentation is
+the structure, free text is literal, and schemas are written in STXT itself.
 
 ```stxt
 # A line starting with '#' is a comment
@@ -26,10 +20,17 @@ Article (blog.post):
         as a block of text lines.
 ```
 
-- `Name: value` declares an **inline node**.
-- `Name >>` opens a **text block**; every deeper-indented line belongs to it.
+- `Name: value` is an **inline node**.
+- `Name >>` opens a **text block**. Every deeper-indented line belongs to it.
 - Indentation is **one level per tab or per 4 spaces**.
-- `Name (a.b.c):` attaches a **namespace** to a node; children inherit it unless they declare their own.
+- `Name (a.b.c):` attaches a **namespace** to a node. Children inherit it unless they declare their own.
+
+Links:
+
+- The language: <https://stxt.dev>
+- The full guide of this library: <https://stxt.dev/tools-typescript>
+- The other implementations: [`dev.stxt:stxt-core`](https://central.sonatype.com/artifact/dev.stxt/stxt-core) (Java) and [`stxt`](https://pypi.org/project/stxt/) (Python)
+- The tools built on it: the [`stxt` command](https://www.npmjs.com/package/@stxt-lang/cli), the [VS Code extension](https://marketplace.visualstudio.com/items?itemName=stxt-lang.stxt) and the [playground](https://play.stxt.dev)
 
 ## Install
 
@@ -37,7 +38,7 @@ Article (blog.post):
 npm install @stxt-lang/core
 ```
 
-The package ships CommonJS plus type declarations, so it works from both TypeScript and plain Node.
+The package ships CommonJS with type declarations, and works from TypeScript and from plain Node. It has no runtime dependencies.
 
 ## Parsing
 
@@ -70,13 +71,26 @@ if (article instanceof InlineNode) {
 }
 ```
 
-Use `parser.parse(text)` instead if you prefer an exception (`ParseException`) on the first error.
+| Entry point | Behaviour |
+|---|---|
+| `parseResult(text)` | Collects every error, and also returns the nodes it managed to build |
+| `parse(text)` | Throws a `ParseException` on the first error |
+| `parseStream(lines)` | Retains no nodes or errors (see *Observing the parse*) |
 
 ## Working with the tree
 
-`Node` is an abstract class with exactly two forms, and each one owns only what is really its own: `InlineNode` (`Name: value`) has the optional value, the children and the child lookups (`getChildren()`, `getChild(name)`, `getChildrenByName(name)`); `TextNode` (`Name >>`) has the literal text lines and nothing else. What they share lives in `Node`: name and canonical name, declared and effective namespace, source line, parent (always an `InlineNode`) and `getText()`, the value of an inline node or the joined lines of a text node. Walking a tree therefore asks for the form (`node instanceof InlineNode`), the same way the canonical tree of STXT-TREE-SPEC has `children` only for inline nodes.
+`Node` is an abstract class with two forms:
 
-Trees are mutable and keep their own integrity: every node knows its parent, `addChild` links both ends and refuses a node that already has one, and `removeChild` / `detach()` undo it. Levels are derived from the chain of parents; the source line is only set by the parser.
+| Class | Syntax | What it has |
+|---|---|---|
+| `InlineNode` | `Name: value` | The optional value, the children and the child lookups: `getChildren()`, `getChild(name)`, `getChildrenByName(name)` |
+| `TextNode` | `Name >>` | The literal text lines |
+
+Both share what is in `Node`: the name and the canonical name, the declared and the effective
+namespace, the source line, the parent (always an `InlineNode`) and `getText()`.
+The form of a node is told apart with `instanceof`.
+
+Trees are mutable, and every node knows its parent:
 
 ```ts
 import { InlineNode, TextNode, Node } from '@stxt-lang/core';
@@ -106,11 +120,15 @@ for (const child of email.getChildren()) {
 }
 ```
 
-Overloads with two strings always take the second one as the *content* (value or text); the namespace only appears in the three-argument forms. Adding a node that already has a parent throws `NODE_ALREADY_ATTACHED`; adding an ancestor throws `NODE_CYCLE`.
+- In the overloads with two strings, the second one is the *content* (value or text). The namespace only appears in the three-argument forms.
+- Adding a node that already has a parent throws `NODE_ALREADY_ATTACHED`. Adding an ancestor throws `NODE_CYCLE`.
+- The level is derived from the chain of parents. The source line is only set by the parser.
 
 ## Validating against a schema
 
-Schemas are themselves STXT documents, written in the reserved `@stxt.schema` namespace (or in the friendlier `@stxt.template` form, which compiles to a schema). `UnifiedSchemaProvider` loads either kind, validates it against the corresponding meta-schema, and registers it by namespace.
+Schemas are STXT documents, written in the `@stxt.schema` namespace, or in the shorter
+`@stxt.template` form, which compiles to a schema. `UnifiedSchemaProvider` loads both kinds,
+validates them against their meta-schema, and registers them by namespace.
 
 ```ts
 import {
@@ -149,21 +167,34 @@ for (const error of result.getErrors()) {
 }
 ```
 
-Available value types: `INLINE`, `BLOCK`, `TEXT`, `MARKDOWN`, `BOOLEAN`, `INTEGER`, `NATURAL`, `NUMBER`, `DATE`, `TIME`, `TIMESTAMP`, `UUID`, `EMAIL`, `URL`, `HEXADECIMAL`, `BINARY`, `BASE64`, `GROUP`, `ENUM`.
+The value types are those of [STXT-SCHEMA-SPEC §9](https://stxt.dev/stxt-schema-ref#s9): `INLINE`, `BLOCK`, `TEXT`, `MARKDOWN`, `BOOLEAN`, `INTEGER`, `NATURAL`, `NUMBER`, `DATE`, `TIME`, `TIMESTAMP`, `UUID`, `EMAIL`, `URL`, `HEXADECIMAL`, `BINARY`, `BASE64`, `GROUP`, `ENUM`.
 
 ## Finding the schemas: discovery
 
-`UnifiedSchemaProvider` expects you to hand it the schema text. **Discovery** answers the previous question: *given this document, which schema definitions apply to it?* `DiscoveryResolver` is the reference implementation of the STXT discovery specification, so a command line, an editor and a build step all agree on the answer by construction.
+`UnifiedSchemaProvider` receives the schema text. **Discovery** answers the previous question:
+given this document, which definitions apply to it? `DiscoveryResolver` implements
+STXT-DISCOVERY-SPEC, and it is the resolver of the command line and of the VS Code extension.
 
-Definitions live in `.stxt/` directories. For a given document the resolution chain is, highest precedence first:
+Definitions live in `.stxt/` directories. For a document, the resolution chain is, highest
+precedence first:
 
-1. every ancestor `.stxt/` directory, nearest first; the ascent does **not** stop at the first one, so in a monorepo both the subproject's and the repo root's participate;
-2. the user level, `$HOME/.stxt` (`%USERPROFILE%\.stxt` on Windows);
-3. the system level, `/etc/stxt` (`%ProgramData%\stxt` on Windows).
+1. Every ancestor `.stxt/` directory, nearest first. The ascent does **not** stop at the first
+   one: in a monorepo, the subproject's and the repository root's both take part.
+2. The user level, `$HOME/.stxt` (`%USERPROFILE%\.stxt` on Windows).
+3. The system level, `/etc/stxt` (`%ProgramData%\stxt` on Windows).
 
-Precedence is **per namespace**: the nearest level that defines a namespace wins, and the rest of the chain still contributes the namespaces that level does not define. Defining one namespace twice at the same level is a resolution error, and leaves that namespace without an active definition. When `STXT_PATH` is defined it replaces the whole chain, which is useful in CI and tests.
+The rules:
 
-The resolver never touches the file system or the environment itself: you inject a `DiscoveryFileSystem` and a `DiscoveryEnvironment`. That is what lets the same logic run over Node's `fs`, over an editor's virtual file system (`vscode.workspace.fs`) or over an in-memory tree in a test. Here are the Node adapters:
+- Precedence is **per namespace**. The nearest level that defines a namespace wins, and the rest
+  of the chain still provides the namespaces that level does not define.
+- Two definitions of one namespace at the same level are a resolution error, and that namespace
+  has no active definition.
+- When `STXT_PATH` is defined it replaces the whole chain, which is useful in CI and in tests.
+
+The resolver never touches the file system or the environment. It receives a
+`DiscoveryFileSystem` and a `DiscoveryEnvironment`, so the same logic runs over Node's `fs`,
+over an editor's virtual file system (`vscode.workspace.fs`) or over an in-memory tree in a
+test. The adapters for Node:
 
 ```ts
 import * as fs from 'fs/promises';
@@ -219,7 +250,7 @@ class NodeEnvironment implements DiscoveryEnvironment {
 }
 ```
 
-With those in place, resolving a document and validating it is two steps, because `DiscoveryResult` implements `SchemaProvider` and goes straight into the validator:
+`DiscoveryResult` implements `SchemaProvider`, so it goes straight into the validator:
 
 ```ts
 import { Parser, SchemaValidator } from '@stxt-lang/core';
@@ -244,7 +275,7 @@ parser.registerValidator(new SchemaValidator(result));
 const parsed = parser.parseResult(documentText);
 ```
 
-`DiscoveryResult` also tells you *where* a schema came from, which is what an editor needs for "go to definition" or a diagnostic that explains itself:
+`DiscoveryResult` also records where each definition came from, which is what an editor needs for "go to definition":
 
 ```ts
 const definition = result.getDefinition('blog.post');
@@ -256,11 +287,11 @@ result.getActiveDefinitions();      // one entry per namespace, precedence appli
 result.getAllSchemas();             // just the schemas of the above
 ```
 
-Levels are cached by directory, so resolving many documents that share ancestors reads each `.stxt/` once. Call `resolver.clearCache()` when the definition files may have changed (from a file watcher, for instance).
+Levels are cached by directory, so each `.stxt/` is read once. `resolver.clearCache()` invalidates the cache when the definition files may have changed.
 
 ## Observing the parse
 
-`Observer` receives streaming callbacks while the document is parsed, which is useful for syntax highlighting, indexes or any per-line bookkeeping.
+An `Observer` receives calls while the document is parsed. It is useful for syntax highlighting or for indexes.
 
 ```ts
 import { Parser, Observer, Node, Line } from '@stxt-lang/core';
@@ -281,9 +312,9 @@ parser.registerObserver(new LoggingObserver());
 parser.parseResult(text);
 ```
 
-`StreamObserver` watches the results instead of the process: each completed root node and each
-error, in every mode. With `parseStream` the parser retains nothing (no nodes, no errors), so a
-file larger than memory can be processed one root tree at a time:
+A `StreamObserver` receives the results: each completed root node and each error. With
+`parseStream` the parser retains no nodes or errors, so a file larger than memory can be
+processed one root tree at a time:
 
 ```ts
 import { Parser, StreamObserver, Node, ParseException } from '@stxt-lang/core';
@@ -298,11 +329,16 @@ parser.parseStream(readLinesLazily(file));  // any Iterable<string> of lines
 
 ## Parser limits
 
-The parser rejects hostile or runaway inputs by default (STXT-SPEC §11.2): documents nesting
-more than 100 levels, lines longer than 10 000 characters, or inputs over 10 000 000
-characters. A limit error is a `LimitException` (`LIMIT_NESTING_EXCEEDED`,
-`LIMIT_LINE_LENGTH_EXCEEDED`, `LIMIT_INPUT_SIZE_EXCEEDED`) and aborts the parse: it is always
-the last error reported. Each limit is configurable per parser; `-1` disables it:
+The parser applies three limits by default (STXT-SPEC §11.2):
+
+| Limit | Default | Error code |
+|---|---|---|
+| Nesting depth | 100 levels | `LIMIT_NESTING_EXCEEDED` |
+| Line length | 10 000 characters | `LIMIT_LINE_LENGTH_EXCEEDED` |
+| Input size | 10 000 000 characters | `LIMIT_INPUT_SIZE_EXCEEDED` |
+
+A limit error is a `LimitException`, and it aborts the parse: it is always the last error
+reported. Each limit is configurable per parser, and `-1` disables it:
 
 ```ts
 const parser = new Parser({ maxNesting: 500, maxInputSize: -1 });
@@ -318,12 +354,11 @@ const text = NodeWriter.toSTXT(node, IndentStyle.TABS);
 const doc = NodeWriter.toSTXTDocs(result.getNodes(), IndentStyle.SPACES_4);
 ```
 
-`NodeWriter` re-serializes the tree, so comments and blank lines are gone. To reformat a document
-**keeping everything the author wrote**, use `Formatter`: it rewrites the original text line by
-line (node lines in canonical form, block lines re-indented to their block, comments and blank
-lines kept with their indentation units converted) and reports the syntax errors it met, so the
-caller decides what to do with a document that does not parse. It is the formatter behind
-`stxt format`, the VS Code extension and the playground.
+`NodeWriter` writes the tree, so comments and blank lines are lost.
+
+`Formatter` reformats a document **keeping the comments and the blank lines**. It rewrites the
+original text line by line, and returns the text together with the syntax errors it found. It is
+the formatter of `stxt format`, the VS Code extension and the playground.
 
 ```ts
 import { Formatter, IndentStyle } from '@stxt-lang/core';
@@ -334,9 +369,8 @@ if (errors.length === 0) {
 }
 ```
 
-`Formatter.format` takes the same limits as the parser as an optional third argument,
-`Formatter.format(source, IndentStyle.TABS, { maxInputSize: -1 })`, since formatting parses
-the document with them (STXT-SPEC §11.2).
+Formatting parses the document, so `Formatter.format` takes the limits of the parser as an
+optional third argument: `Formatter.format(source, IndentStyle.TABS, { maxInputSize: -1 })`.
 
 ## API surface
 
@@ -352,7 +386,14 @@ Everything importable from the package:
 
 ## Conformance
 
-`@stxt-lang/core` implements the five STXT specifications as of `SPEC_VERSION` (the date of the STXT-SPEC text it implements, exposed by the package; the package version is independent) and passes every case of the official conformance kit, [`stxt-lang/conformance`](https://github.com/stxt-lang/stxt-lang/tree/master/conformance), across all its profiles: `core`, `schema`, `template`, `discovery` and `text`. The kit is the same one any other implementation can run, which is what makes the three ports interchangeable. What is frozen, and what is not, is stated at <https://stxt.dev/stability>: the specifications carry a date and a status instead of a version number.
+`@stxt-lang/core` implements the five STXT specifications, and passes every case of the
+[conformance kit](https://github.com/stxt-lang/stxt-lang/tree/master/conformance) in all its
+profiles: `core`, `schema`, `template`, `discovery` and `text`. It is the same kit the other
+implementations run.
+
+`SPEC_VERSION` is the date of the STXT-SPEC text the package implements. The package version is
+independent, and follows semver. The specifications carry a date and a status, not a version
+number: see <https://stxt.dev/stability>.
 
 ## License
 
