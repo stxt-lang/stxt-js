@@ -40,6 +40,37 @@ npm install @stxt-lang/core
 
 The package ships CommonJS with type declarations, and works from TypeScript and from plain Node. It has no runtime dependencies.
 
+## In the browser
+
+```html
+<script src="https://cdn.jsdelivr.net/npm/@stxt-lang/core@1.0.4/dist/stxt-core.js"></script>
+<script>
+    const result = new StxtCore.Parser().parseResult('Article: Hello\n\tAuthor: Joan');
+    console.log(StxtCore.toCanonicalJson(result.getNodes()));
+</script>
+```
+
+```html
+<script type="module">
+    import { Parser } from 'https://cdn.jsdelivr.net/npm/@stxt-lang/core@1.0.4/dist/stxt-core.mjs';
+
+    const result = new Parser().parseResult('Article: Hello\n\tAuthor: Joan');
+</script>
+```
+
+The package carries two bundles of the whole library, minified and with no dependencies. Any
+CDN that serves npm packages serves them.
+
+| File | Format | Use |
+|---|---|---|
+| `dist/stxt-core.js` | Script, defines the global `StxtCore` | `<script src>` |
+| `dist/stxt-core.mjs` | ES module | `<script type="module">`, `import` from a URL |
+
+Both export exactly what the package does (see *API surface*). The library uses no Node API:
+discovery reaches the file system through the adapters it is given.
+
+With a bundler, the package is installed from npm and imported as in the rest of this guide.
+
 ## Parsing
 
 ```ts

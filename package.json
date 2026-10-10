@@ -1,9 +1,11 @@
 {
   "name": "@stxt-lang/core",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Parser and schema validator for STXT, an indentation-based structured-text language.",
   "main": "out/all.js",
   "types": "out/all.d.ts",
+  "unpkg": "dist/stxt-core.js",
+  "jsdelivr": "dist/stxt-core.js",
   "publishConfig": {
     "access": "public"
   },
@@ -17,11 +19,14 @@
     "out/runtime",
     "out/schema",
     "out/template",
-    "!out/**/*.js.map"
+    "!out/**/*.js.map",
+    "dist/stxt-core.js",
+    "dist/stxt-core.mjs"
   ],
   "scripts": {
-    "clean": "node -e \"require('node:fs').rmSync('out', { recursive: true, force: true })\"",
-    "build": "npm run clean && tsc",
+    "clean": "node -e \"for (const dir of ['out', 'dist']) require('node:fs').rmSync(dir, { recursive: true, force: true })\"",
+    "build": "npm run clean && tsc && npm run build:bundle",
+    "build:bundle": "esbuild src/all.ts --bundle --format=iife --global-name=StxtCore --target=es2021 --minify --banner:js=\"/*! @stxt-lang/core | MIT License | https://stxt.dev */\" --outfile=dist/stxt-core.js && esbuild src/all.ts --bundle --format=esm --target=es2021 --minify --banner:js=\"/*! @stxt-lang/core | MIT License | https://stxt.dev */\" --outfile=dist/stxt-core.mjs",
     "watch": "tsc --watch",
     "lint": "eslint src --ext .ts",
     "prepare": "npm run build",
@@ -54,6 +59,7 @@
     "@types/node": "22.x",
     "@typescript-eslint/eslint-plugin": "^5.62.0",
     "@typescript-eslint/parser": "^5.62.0",
+    "esbuild": "^0.25.12",
     "eslint": "^8.57.1",
     "mocha": "^11.7.5",
     "typescript": "^5.5.4"
